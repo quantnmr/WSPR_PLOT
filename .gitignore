@@ -1,0 +1,13 @@
+# Backup/temporary Earth textures
+earth.jpg
+earth2.jpg
+earth_8k.tif
+
+# macOS
+.DS_Store
+
+# Editor
+*.swp
+*.swo
+*~
+
