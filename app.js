@@ -140,6 +140,41 @@ const bandColors = {
     144: '#ff0099'
 };
 
+// Band frequency ranges in Hz (for SQL queries)
+// Each band has a center frequency and we query ±100kHz
+const bandRanges = {
+    0.137: { min: 136000, max: 138000 },
+    0.475: { min: 474000, max: 480000 },
+    1.8: { min: 1800000, max: 1900000 },
+    3.5: { min: 3500000, max: 3600000 },
+    5.3: { min: 5200000, max: 5500000 },
+    7: { min: 7000000, max: 7100000 },
+    10: { min: 10100000, max: 10200000 },
+    14: { min: 14000000, max: 14200000 },
+    18: { min: 18000000, max: 18200000 },
+    21: { min: 21000000, max: 21200000 },
+    24: { min: 24800000, max: 25000000 },
+    28: { min: 28000000, max: 28300000 },
+    50: { min: 50000000, max: 50500000 },
+    144: { min: 144000000, max: 145000000 }
+};
+
+// Build SQL frequency filter clause
+function buildBandFilterSQL() {
+    const selectedBands = getSelectedBands();
+    if (selectedBands.length === 0) return null;
+    if (selectedBands.length === Object.keys(bandRanges).length) return null; // All bands selected, no filter needed
+    
+    const conditions = selectedBands.map(band => {
+        const range = bandRanges[band];
+        if (!range) return null;
+        return `(frequency >= ${range.min} AND frequency <= ${range.max})`;
+    }).filter(c => c !== null);
+    
+    if (conditions.length === 0) return null;
+    return `(${conditions.join(' OR ')})`;
+}
+
 function getBandColor(freqMHz) {
     // Find closest band
     let closest = 14;
@@ -237,25 +272,38 @@ async function loadWSPRData() {
     const timeWindow = parseInt(timeWindowEl.value);
     const maxLines = parseInt(maxLinesEl.value);
 
-    setStatus('Loading WSPR spots...', 'loading');
-    loadBtn.disabled = true;
+            // Check if any bands are selected
+            const selectedBands = getSelectedBands();
+            if (selectedBands.length === 0) {
+                setStatus('Please select at least one frequency band', 'error');
+                return;
+            }
 
-    try {
+            setStatus('Loading WSPR spots...', 'loading');
+            loadBtn.disabled = true;
+
+            try {
         // Build query for wspr.live API
         const now = new Date();
         const startTime = new Date(now.getTime() - timeWindow * 60 * 1000);
         const startStr = startTime.toISOString().slice(0, 19).replace('T', ' ');
 
-        let query = `SELECT * FROM wspr.rx WHERE time >= '${startStr}'`;
-        
-        if (rxCall) {
-            query += ` AND rx_sign = '${rxCall}'`;
-        }
-        if (txCall) {
-            query += ` AND tx_sign = '${txCall}'`;
-        }
-        
-        query += ` ORDER BY time DESC LIMIT ${maxLines}`;
+                let query = `SELECT * FROM wspr.rx WHERE time >= '${startStr}'`;
+                
+                if (rxCall) {
+                    query += ` AND rx_sign = '${rxCall}'`;
+                }
+                if (txCall) {
+                    query += ` AND tx_sign = '${txCall}'`;
+                }
+                
+                // Add band filter to query
+                const bandFilter = buildBandFilterSQL();
+                if (bandFilter) {
+                    query += ` AND ${bandFilter}`;
+                }
+                
+                query += ` ORDER BY time DESC LIMIT ${maxLines}`;
 
         const url = `https://db1.wspr.live/?query=${encodeURIComponent(query)} FORMAT JSON`;
         
