@@ -179,6 +179,56 @@ body {
     margin-top: 20px;
 }
 
+.band-legend h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-small {
+    padding: 2px 8px;
+    font-size: 0.7em;
+    background: #333;
+    color: #aaa;
+    border: 1px solid #555;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.btn-small:hover {
+    background: #444;
+    color: #fff;
+}
+
+.band-filter {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 8px;
+}
+
+.band-checkbox {
+    display: flex;
+    align-items: center;
+    font-size: 0.8em;
+    cursor: pointer;
+}
+
+.band-checkbox input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    margin-right: 6px;
+    cursor: pointer;
+}
+
+.band-checkbox .band-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+    margin-right: 6px;
+}
+
 .band-item {
     display: flex;
     align-items: center;

@@ -15,9 +15,62 @@ const arcOptionsEl = document.getElementById('arcOptions');
 const frequencyLegendEl = document.getElementById('frequencyLegend');
 const beaconLegendEl = document.getElementById('beaconLegend');
 
+// Band filter elements
+const bandCheckboxes = document.querySelectorAll('.band-checkbox input[type="checkbox"]');
+const selectAllBandsBtn = document.getElementById('selectAllBands');
+const selectNoBandsBtn = document.getElementById('selectNoBands');
+
 // Auto-uppercase call signs
 rxCallsignEl.addEventListener('input', (e) => e.target.value = e.target.value.toUpperCase());
 txCallsignEl.addEventListener('input', (e) => e.target.value = e.target.value.toUpperCase());
+
+// Get selected bands
+function getSelectedBands() {
+    const selected = [];
+    bandCheckboxes.forEach(cb => {
+        if (cb.checked) {
+            selected.push(parseFloat(cb.dataset.band));
+        }
+    });
+    return selected;
+}
+
+// Check if frequency is in selected bands
+function isFrequencySelected(freqMHz) {
+    const selectedBands = getSelectedBands();
+    if (selectedBands.length === 0) return false;
+    
+    // Find closest band and check if it's selected
+    let closestBand = null;
+    let minDiff = Infinity;
+    
+    for (const band of Object.keys(bandColors)) {
+        const diff = Math.abs(freqMHz - parseFloat(band));
+        if (diff < minDiff) {
+            minDiff = diff;
+            closestBand = parseFloat(band);
+        }
+    }
+    
+    return selectedBands.includes(closestBand);
+}
+
+// Band filter event listeners
+selectAllBandsBtn.addEventListener('click', () => {
+    bandCheckboxes.forEach(cb => cb.checked = true);
+    if (currentSpots) rerenderData();
+});
+
+selectNoBandsBtn.addEventListener('click', () => {
+    bandCheckboxes.forEach(cb => cb.checked = false);
+    if (currentSpots) rerenderData();
+});
+
+bandCheckboxes.forEach(cb => {
+    cb.addEventListener('change', () => {
+        if (currentSpots) rerenderData();
+    });
+});
 
 // Convert hex color to rgba
 function hexToRgba(hex, alpha) {
@@ -254,8 +307,12 @@ function rerenderData() {
     
     if (isBeaconMode) {
         renderBeaconPoints();
+        const pointCount = globe.pointsData().length;
+        setStatus(`Showing ${pointCount} beacon positions (filtered from ${currentSpots.length} spots)`, 'success');
     } else {
         renderArcs();
+        const arcCount = globe.arcsData().length;
+        setStatus(`Showing ${arcCount} unique paths (filtered from ${currentSpots.length} spots)`, 'success');
     }
 }
 
@@ -268,6 +325,11 @@ function renderArcs() {
     const seen = new Set();
     
     for (const spot of currentSpots) {
+        const freqMHz = spot.frequency / 1000000;
+        
+        // Filter by selected bands
+        if (!isFrequencySelected(freqMHz)) continue;
+        
         const txLoc = gridToLatLng(spot.tx_loc);
         const rxLoc = gridToLatLng(spot.rx_loc);
         
@@ -282,7 +344,6 @@ function renderArcs() {
         if (seen.has(pathKey)) continue;
         seen.add(pathKey);
 
-        const freqMHz = spot.frequency / 1000000;
         let color = getBandColor(freqMHz);
         
         if (useTransparency) {
@@ -334,6 +395,11 @@ function renderBeaconPoints() {
     let prevPoint = null;
     
     for (const spot of sortedSpots) {
+        const freqMHz = spot.frequency / 1000000;
+        
+        // Filter by selected bands
+        if (!isFrequencySelected(freqMHz)) continue;
+        
         const txLoc = gridToLatLng(spot.tx_loc);
         if (!txLoc) continue;
         

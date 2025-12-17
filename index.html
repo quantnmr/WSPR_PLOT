@@ -83,19 +83,21 @@
         <div class="status" id="status">Ready to search</div>
 
         <div class="band-legend" id="frequencyLegend">
-            <h2>Frequency Bands</h2>
-            <div class="band-item"><span class="band-color" style="background: #ff0000;"></span>137 kHz</div>
-            <div class="band-item"><span class="band-color" style="background: #ff6600;"></span>475 kHz</div>
-            <div class="band-item"><span class="band-color" style="background: #ffcc00;"></span>1.8 MHz</div>
-            <div class="band-item"><span class="band-color" style="background: #99ff00;"></span>3.5 MHz</div>
-            <div class="band-item"><span class="band-color" style="background: #00ff00;"></span>7 MHz</div>
-            <div class="band-item"><span class="band-color" style="background: #00ff99;"></span>10 MHz</div>
-            <div class="band-item"><span class="band-color" style="background: #00ffff;"></span>14 MHz</div>
-            <div class="band-item"><span class="band-color" style="background: #0099ff;"></span>18 MHz</div>
-            <div class="band-item"><span class="band-color" style="background: #0000ff;"></span>21 MHz</div>
-            <div class="band-item"><span class="band-color" style="background: #9900ff;"></span>28 MHz</div>
-            <div class="band-item"><span class="band-color" style="background: #ff00ff;"></span>50 MHz</div>
-            <div class="band-item"><span class="band-color" style="background: #ff0099;"></span>144 MHz</div>
+            <h2>Frequency Bands <button class="btn-small" id="selectAllBands">All</button> <button class="btn-small" id="selectNoBands">None</button></h2>
+            <div class="band-filter">
+                <label class="band-checkbox"><input type="checkbox" data-band="0.137" checked><span class="band-color" style="background: #ff0000;"></span>137 kHz</label>
+                <label class="band-checkbox"><input type="checkbox" data-band="0.475" checked><span class="band-color" style="background: #ff6600;"></span>475 kHz</label>
+                <label class="band-checkbox"><input type="checkbox" data-band="1.8" checked><span class="band-color" style="background: #ffcc00;"></span>1.8 MHz</label>
+                <label class="band-checkbox"><input type="checkbox" data-band="3.5" checked><span class="band-color" style="background: #99ff00;"></span>3.5 MHz</label>
+                <label class="band-checkbox"><input type="checkbox" data-band="7" checked><span class="band-color" style="background: #00ff00;"></span>7 MHz</label>
+                <label class="band-checkbox"><input type="checkbox" data-band="10" checked><span class="band-color" style="background: #00ff99;"></span>10 MHz</label>
+                <label class="band-checkbox"><input type="checkbox" data-band="14" checked><span class="band-color" style="background: #00ffff;"></span>14 MHz</label>
+                <label class="band-checkbox"><input type="checkbox" data-band="18" checked><span class="band-color" style="background: #0099ff;"></span>18 MHz</label>
+                <label class="band-checkbox"><input type="checkbox" data-band="21" checked><span class="band-color" style="background: #0000ff;"></span>21 MHz</label>
+                <label class="band-checkbox"><input type="checkbox" data-band="28" checked><span class="band-color" style="background: #9900ff;"></span>28 MHz</label>
+                <label class="band-checkbox"><input type="checkbox" data-band="50" checked><span class="band-color" style="background: #ff00ff;"></span>50 MHz</label>
+                <label class="band-checkbox"><input type="checkbox" data-band="144" checked><span class="band-color" style="background: #ff0099;"></span>144 MHz</label>
+            </div>
         </div>
 
         <div class="band-legend" id="beaconLegend" style="display: none;">
