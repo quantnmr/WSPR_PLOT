@@ -314,74 +314,47 @@ function getSunPosition(date = new Date()) {
 }
 
 // Generate terminator polygon (night side)
+// Night is the hemisphere centered on the anti-solar point
 function getTerminatorPolygon(sunPos) {
-    const points = [];
+    // Anti-solar point (point on Earth opposite the sun = midnight point)
+    const antiSunLat = -sunPos.lat;  // Opposite latitude
+    let antiSunLng = sunPos.lng + 180;  // Opposite longitude
+    if (antiSunLng > 180) antiSunLng -= 360;
+    
+    const antiSunLatRad = antiSunLat * Math.PI / 180;
+    const antiSunLngRad = antiSunLng * Math.PI / 180;
+    
+    // Generate a circle of points 90° from the anti-solar point
+    // This is the terminator line, enclosing the night hemisphere
     const numPoints = 72;
+    const nightPolygon = [];
     
-    // Subsolar point in radians
-    const sunLatRad = sunPos.lat * Math.PI / 180;
-    const sunLngRad = sunPos.lng * Math.PI / 180;
-    
-    // The terminator is a great circle 90° from the subsolar point
-    // Generate points along this circle
     for (let i = 0; i < numPoints; i++) {
         const bearing = (i / numPoints) * 2 * Math.PI;
         
-        // Calculate point 90° from subsolar point at given bearing
-        // Using spherical geometry formulas
-        const angularDist = Math.PI / 2; // 90 degrees in radians
+        // Calculate point 90° from anti-solar point at given bearing
+        const angularDist = Math.PI / 2; // 90 degrees
         
         const lat = Math.asin(
-            Math.sin(sunLatRad) * Math.cos(angularDist) +
-            Math.cos(sunLatRad) * Math.sin(angularDist) * Math.cos(bearing)
+            Math.sin(antiSunLatRad) * Math.cos(angularDist) +
+            Math.cos(antiSunLatRad) * Math.sin(angularDist) * Math.cos(bearing)
         );
         
-        const lng = sunLngRad + Math.atan2(
-            Math.sin(bearing) * Math.sin(angularDist) * Math.cos(sunLatRad),
-            Math.cos(angularDist) - Math.sin(sunLatRad) * Math.sin(lat)
+        const lng = antiSunLngRad + Math.atan2(
+            Math.sin(bearing) * Math.sin(angularDist) * Math.cos(antiSunLatRad),
+            Math.cos(angularDist) - Math.sin(antiSunLatRad) * Math.sin(lat)
         );
         
-        points.push([lng * 180 / Math.PI, lat * 180 / Math.PI]);
+        let lngDeg = lng * 180 / Math.PI;
+        // Normalize longitude
+        while (lngDeg > 180) lngDeg -= 360;
+        while (lngDeg < -180) lngDeg += 360;
+        
+        nightPolygon.push([lngDeg, lat * 180 / Math.PI]);
     }
     
-    // Close the terminator loop
-    points.push(points[0]);
-    
-    // Now build the night polygon
-    // We need to determine which side of the terminator is night
-    // Night is on the opposite side from the sun
-    
-    // Split terminator into "left" and "right" halves
-    // and add the appropriate pole
-    const nightPole = sunPos.lat > 0 ? -90 : 90;
-    const antiSunLng = sunPos.lng > 0 ? sunPos.lng - 180 : sunPos.lng + 180;
-    
-    // Find the points on the terminator and build polygon going through night pole
-    const nightPolygon = [];
-    
-    // Sort points by longitude relative to anti-sun longitude
-    const sortedPoints = [...points].sort((a, b) => {
-        let lngA = a[0] - antiSunLng;
-        let lngB = b[0] - antiSunLng;
-        if (lngA > 180) lngA -= 360;
-        if (lngA < -180) lngA += 360;
-        if (lngB > 180) lngB -= 360;
-        if (lngB < -180) lngB += 360;
-        return lngA - lngB;
-    });
-    
-    // Build night polygon: terminator curve + pole
-    for (const p of sortedPoints) {
-        nightPolygon.push(p);
-    }
-    
-    // Add path to pole and back
-    const lastPt = sortedPoints[sortedPoints.length - 1];
-    const firstPt = sortedPoints[0];
-    
-    nightPolygon.push([lastPt[0], nightPole]);
-    nightPolygon.push([firstPt[0], nightPole]);
-    nightPolygon.push(firstPt);
+    // Close the polygon
+    nightPolygon.push(nightPolygon[0]);
     
     return nightPolygon;
 }
@@ -397,9 +370,15 @@ function updateTerminator() {
     
     const sunPos = getSunPosition();
     const now = new Date();
+    console.log('=== Day/Night Terminator Debug ===');
     console.log('Current UTC:', now.toISOString());
-    console.log('Sun position - Lat:', sunPos.lat.toFixed(2), 'Lng:', sunPos.lng.toFixed(2));
-    console.log('(Subsolar point: where sun is directly overhead)');
+    console.log('Subsolar point (sun overhead): Lat', sunPos.lat.toFixed(2) + '°, Lng', sunPos.lng.toFixed(2) + '°');
+    
+    // Anti-solar point for reference
+    const antiLat = -sunPos.lat;
+    let antiLng = sunPos.lng + 180;
+    if (antiLng > 180) antiLng -= 360;
+    console.log('Anti-solar point (midnight): Lat', antiLat.toFixed(2) + '°, Lng', antiLng.toFixed(2) + '°');
     
     const nightPoly = getTerminatorPolygon(sunPos);
     console.log('Night polygon points:', nightPoly.length);
