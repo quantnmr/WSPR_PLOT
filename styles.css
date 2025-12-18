@@ -631,3 +631,56 @@ body {
     }
 }
 
+/* Footer */
+.site-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(26, 26, 46, 0.95);
+    border-top: 1px solid #333;
+    padding: 8px 20px;
+    z-index: 50;
+    font-size: 0.75em;
+    color: #888;
+    text-align: center;
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.footer-content p {
+    margin: 2px 0;
+}
+
+.footer-license {
+    font-size: 0.9em;
+}
+
+.footer-license a {
+    color: #4fc3f7;
+    text-decoration: none;
+}
+
+.footer-license a:hover {
+    text-decoration: underline;
+}
+
+/* Adjust globe container to account for footer */
+#globeContainer {
+    padding-bottom: 50px;
+}
+
+@media (max-width: 768px) {
+    .site-footer {
+        padding: 6px 10px;
+        font-size: 0.7em;
+    }
+    
+    #globeContainer {
+        padding-bottom: 45px;
+    }
+}
+
