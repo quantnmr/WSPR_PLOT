@@ -1,4 +1,4 @@
-# WSPR Plot - Development Notes
+# WSPR Globe - Development Notes
 
 ## Overview
 A web-based application for plotting WSPR (Weak Signal Propagation Reporter) spots on an interactive 3D globe.

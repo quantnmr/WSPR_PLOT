@@ -1,4 +1,4 @@
-// WSPR Plot Application
+// WSPR Globe Application
 
 // Sidebar toggle functionality
 const sidebar = document.getElementById('sidebar');
