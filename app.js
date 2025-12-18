@@ -313,50 +313,80 @@ function getSunPosition(date = new Date()) {
     };
 }
 
-// Generate terminator polygon (night side)
-// Night is the hemisphere centered on the anti-solar point
-function getTerminatorPolygon(sunPos) {
-    // Anti-solar point (point on Earth opposite the sun = midnight point)
-    const antiSunLat = -sunPos.lat;  // Opposite latitude
-    let antiSunLng = sunPos.lng + 180;  // Opposite longitude
-    if (antiSunLng > 180) antiSunLng -= 360;
+// Generate a circle polygon at a given angular distance from a center point
+function generateCirclePolygon(centerLat, centerLng, angularDistDeg) {
+    const centerLatRad = centerLat * Math.PI / 180;
+    const centerLngRad = centerLng * Math.PI / 180;
+    const angularDist = angularDistDeg * Math.PI / 180;
     
-    const antiSunLatRad = antiSunLat * Math.PI / 180;
-    const antiSunLngRad = antiSunLng * Math.PI / 180;
-    
-    // Generate a circle of points 90° from the anti-solar point
-    // This is the terminator line, enclosing the night hemisphere
     const numPoints = 72;
-    const nightPolygon = [];
+    const polygon = [];
     
     for (let i = 0; i < numPoints; i++) {
         const bearing = (i / numPoints) * 2 * Math.PI;
         
-        // Calculate point 90° from anti-solar point at given bearing
-        const angularDist = Math.PI / 2; // 90 degrees
-        
         const lat = Math.asin(
-            Math.sin(antiSunLatRad) * Math.cos(angularDist) +
-            Math.cos(antiSunLatRad) * Math.sin(angularDist) * Math.cos(bearing)
+            Math.sin(centerLatRad) * Math.cos(angularDist) +
+            Math.cos(centerLatRad) * Math.sin(angularDist) * Math.cos(bearing)
         );
         
-        const lng = antiSunLngRad + Math.atan2(
-            Math.sin(bearing) * Math.sin(angularDist) * Math.cos(antiSunLatRad),
-            Math.cos(angularDist) - Math.sin(antiSunLatRad) * Math.sin(lat)
+        const lng = centerLngRad + Math.atan2(
+            Math.sin(bearing) * Math.sin(angularDist) * Math.cos(centerLatRad),
+            Math.cos(angularDist) - Math.sin(centerLatRad) * Math.sin(lat)
         );
         
         let lngDeg = lng * 180 / Math.PI;
-        // Normalize longitude
         while (lngDeg > 180) lngDeg -= 360;
         while (lngDeg < -180) lngDeg += 360;
         
-        nightPolygon.push([lngDeg, lat * 180 / Math.PI]);
+        polygon.push([lngDeg, lat * 180 / Math.PI]);
     }
     
-    // Close the polygon
-    nightPolygon.push(nightPolygon[0]);
+    polygon.push(polygon[0]); // Close the polygon
+    return polygon;
+}
+
+// Generate terminator polygons with gradient (twilight zones)
+function getTerminatorPolygons(sunPos) {
+    // Anti-solar point (center of night)
+    const antiSunLat = -sunPos.lat;
+    let antiSunLng = sunPos.lng + 180;
+    if (antiSunLng > 180) antiSunLng -= 360;
     
-    return nightPolygon;
+    // Create multiple bands for gradient effect
+    // Angular distances from anti-solar point:
+    // - 90° = terminator (day/night boundary)
+    // - 84° = civil twilight boundary (sun 6° below horizon)
+    // - 78° = nautical twilight boundary (sun 12° below horizon)
+    // - 72° = astronomical twilight boundary (sun 18° below horizon)
+    
+    const polygons = [];
+    
+    // Astronomical twilight band (lightest, outermost)
+    polygons.push({
+        coords: generateCirclePolygon(antiSunLat, antiSunLng, 90),
+        color: 'rgba(0, 0, 30, 0.15)'  // Very light
+    });
+    
+    // Nautical twilight band
+    polygons.push({
+        coords: generateCirclePolygon(antiSunLat, antiSunLng, 84),
+        color: 'rgba(0, 0, 30, 0.25)'
+    });
+    
+    // Civil twilight band
+    polygons.push({
+        coords: generateCirclePolygon(antiSunLat, antiSunLng, 78),
+        color: 'rgba(0, 0, 30, 0.35)'
+    });
+    
+    // Full night (darkest, innermost)
+    polygons.push({
+        coords: generateCirclePolygon(antiSunLat, antiSunLng, 72),
+        color: 'rgba(0, 0, 30, 0.45)'
+    });
+    
+    return polygons;
 }
 
 // Update terminator display
@@ -380,20 +410,26 @@ function updateTerminator() {
     if (antiLng > 180) antiLng -= 360;
     console.log('Anti-solar point (midnight): Lat', antiLat.toFixed(2) + '°, Lng', antiLng.toFixed(2) + '°');
     
-    const nightPoly = getTerminatorPolygon(sunPos);
-    console.log('Night polygon points:', nightPoly.length);
+    // Get gradient polygons (twilight zones)
+    const twilightPolygons = getTerminatorPolygons(sunPos);
     
-    // GeoJSON format for globe.gl
-    const geoJson = {
+    // Convert to GeoJSON format for globe.gl
+    const geoJsonFeatures = twilightPolygons.map((poly, idx) => ({
         type: 'Feature',
         geometry: {
             type: 'Polygon',
-            coordinates: [nightPoly]
+            coordinates: [poly.coords]
         },
-        properties: { name: 'Night' }
-    };
+        properties: { 
+            name: ['Astronomical Twilight', 'Nautical Twilight', 'Civil Twilight', 'Night'][idx],
+            color: poly.color
+        }
+    }));
     
-    globe.polygonsData([geoJson]);
+    globe.polygonsData(geoJsonFeatures)
+        .polygonCapColor(d => d.properties.color)
+        .polygonSideColor(() => 'rgba(0, 0, 0, 0)')
+        .polygonStrokeColor(() => null);
 }
 
 // Start/stop terminator updates
