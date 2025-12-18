@@ -390,9 +390,9 @@ const globe = Globe()(container)
     .heatmapPointLat('lat')
     .heatmapPointLng('lng')
     .heatmapPointWeight('weight')
-    .heatmapTopAltitude(0.01)
-    .heatmapBandwidth(0.9)
-    .heatmapColorSaturation(2.5)
+    .heatmapTopAltitude(0.02)
+    .heatmapBandwidth(2)
+    .heatmapColorSaturation(1.8)
     .onGlobeReady(() => {
         globe.scene().traverse(obj => {
             if (obj.type === 'Mesh' && obj.material && obj.material.map) {
@@ -649,7 +649,7 @@ function renderArcs() {
     if (showHeatmap) {
         const locationCounts = new Map();
         
-        // Count spots at each location
+        // Count spots at each location - use coarser grid (1 degree) for performance
         for (const spot of currentSpots) {
             const freqMHz = spot.frequency / 1000000;
             if (!isFrequencySelected(freqMHz)) continue;
@@ -658,22 +658,26 @@ function renderArcs() {
             const rxLoc = gridToLatLng(spot.rx_loc);
             
             if (txLoc) {
-                const key = `${txLoc.lat.toFixed(2)},${txLoc.lng.toFixed(2)}`;
+                const key = `${Math.round(txLoc.lat)},${Math.round(txLoc.lng)}`;
                 locationCounts.set(key, (locationCounts.get(key) || 0) + 1);
             }
             if (rxLoc) {
-                const key = `${rxLoc.lat.toFixed(2)},${rxLoc.lng.toFixed(2)}`;
+                const key = `${Math.round(rxLoc.lat)},${Math.round(rxLoc.lng)}`;
                 locationCounts.set(key, (locationCounts.get(key) || 0) + 1);
             }
         }
         
-        // Convert to heatmap points
-        locationCounts.forEach((count, key) => {
+        // Convert to heatmap points - limit to top 200 for performance
+        const sortedLocations = Array.from(locationCounts.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 200);
+        
+        sortedLocations.forEach(([key, count]) => {
             const [lat, lng] = key.split(',').map(Number);
             heatmapData.push({
                 lat: lat,
                 lng: lng,
-                weight: Math.sqrt(count)  // Use sqrt to reduce extreme values
+                weight: Math.sqrt(count)
             });
         });
     }
