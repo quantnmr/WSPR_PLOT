@@ -319,7 +319,7 @@ function generateCirclePolygon(centerLat, centerLng, angularDistDeg) {
     const centerLngRad = centerLng * Math.PI / 180;
     const angularDist = angularDistDeg * Math.PI / 180;
     
-    const numPoints = 72;
+    const numPoints = 120;  // More points for smoother circles
     const polygon = [];
     
     for (let i = 0; i < numPoints; i++) {
@@ -346,45 +346,35 @@ function generateCirclePolygon(centerLat, centerLng, angularDistDeg) {
     return polygon;
 }
 
-// Generate terminator polygons with gradient (twilight zones)
+// Generate terminator polygons with smooth gradient (twilight zones)
 function getTerminatorPolygons(sunPos) {
     // Anti-solar point (center of night)
     const antiSunLat = -sunPos.lat;
     let antiSunLng = sunPos.lng + 180;
     if (antiSunLng > 180) antiSunLng -= 360;
     
-    // Create multiple bands for gradient effect
-    // Angular distances from anti-solar point:
-    // - 90° = terminator (day/night boundary)
-    // - 84° = civil twilight boundary (sun 6° below horizon)
-    // - 78° = nautical twilight boundary (sun 12° below horizon)
-    // - 72° = astronomical twilight boundary (sun 18° below horizon)
-    
+    // Create many bands for smooth gradient effect
+    // From 90° (terminator) down to 70° (deep night) in small steps
     const polygons = [];
+    const numBands = 12;
+    const startAngle = 90;  // Terminator
+    const endAngle = 66;    // Deep night
+    const angleStep = (startAngle - endAngle) / numBands;
     
-    // Astronomical twilight band (lightest, outermost)
-    polygons.push({
-        coords: generateCirclePolygon(antiSunLat, antiSunLng, 90),
-        color: 'rgba(0, 0, 30, 0.15)'  // Very light
-    });
+    // Opacity increases from outer (terminator) to inner (deep night)
+    const startOpacity = 0.08;
+    const endOpacity = 0.5;
+    const opacityStep = (endOpacity - startOpacity) / numBands;
     
-    // Nautical twilight band
-    polygons.push({
-        coords: generateCirclePolygon(antiSunLat, antiSunLng, 84),
-        color: 'rgba(0, 0, 30, 0.25)'
-    });
-    
-    // Civil twilight band
-    polygons.push({
-        coords: generateCirclePolygon(antiSunLat, antiSunLng, 78),
-        color: 'rgba(0, 0, 30, 0.35)'
-    });
-    
-    // Full night (darkest, innermost)
-    polygons.push({
-        coords: generateCirclePolygon(antiSunLat, antiSunLng, 72),
-        color: 'rgba(0, 0, 30, 0.45)'
-    });
+    for (let i = 0; i < numBands; i++) {
+        const angle = startAngle - (i * angleStep);
+        const opacity = startOpacity + (i * opacityStep);
+        
+        polygons.push({
+            coords: generateCirclePolygon(antiSunLat, antiSunLng, angle),
+            color: `rgba(0, 0, 20, ${opacity.toFixed(3)})`
+        });
+    }
     
     return polygons;
 }
