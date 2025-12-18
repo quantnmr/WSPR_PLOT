@@ -140,6 +140,7 @@ const maxLinesEl = document.getElementById('maxLines');
 const animateLinesEl = document.getElementById('animateLines');
 const solidLinesEl = document.getElementById('solidLines');
 const showMarkersEl = document.getElementById('showMarkers');
+const heatmapModeEl = document.getElementById('heatmapMode');
 const beaconModeEl = document.getElementById('beaconMode');
 const arcOptionsEl = document.getElementById('arcOptions');
 const frequencyLegendEl = document.getElementById('frequencyLegend');
@@ -384,6 +385,14 @@ const globe = Globe()(container)
     // Hover labels
     .arcLabel(d => d.spot ? `${d.spot.tx_sign} → ${d.spot.rx_sign}` : '')
     .pointLabel(d => d.label || '')
+    // Heatmap configuration
+    .heatmapsData([])
+    .heatmapPointLat('lat')
+    .heatmapPointLng('lng')
+    .heatmapPointWeight('weight')
+    .heatmapTopAltitude(0.01)
+    .heatmapBandwidth(0.9)
+    .heatmapColorSaturation(2.5)
     .onGlobeReady(() => {
         globe.scene().traverse(obj => {
             if (obj.type === 'Mesh' && obj.material && obj.material.map) {
@@ -632,11 +641,49 @@ function renderArcs() {
     globe.pointColor(d => d.color);
     globe.pointAltitude(0.005);
 
+    // Check if heatmap mode is enabled
+    const showHeatmap = heatmapModeEl.checked;
+    
+    // Build heatmap data from all TX and RX locations
+    let heatmapData = [];
+    if (showHeatmap) {
+        const locationCounts = new Map();
+        
+        // Count spots at each location
+        for (const spot of currentSpots) {
+            const freqMHz = spot.frequency / 1000000;
+            if (!isFrequencySelected(freqMHz)) continue;
+            
+            const txLoc = gridToLatLng(spot.tx_loc);
+            const rxLoc = gridToLatLng(spot.rx_loc);
+            
+            if (txLoc) {
+                const key = `${txLoc.lat.toFixed(2)},${txLoc.lng.toFixed(2)}`;
+                locationCounts.set(key, (locationCounts.get(key) || 0) + 1);
+            }
+            if (rxLoc) {
+                const key = `${rxLoc.lat.toFixed(2)},${rxLoc.lng.toFixed(2)}`;
+                locationCounts.set(key, (locationCounts.get(key) || 0) + 1);
+            }
+        }
+        
+        // Convert to heatmap points
+        locationCounts.forEach((count, key) => {
+            const [lat, lng] = key.split(',').map(Number);
+            heatmapData.push({
+                lat: lat,
+                lng: lng,
+                weight: Math.sqrt(count)  // Use sqrt to reduce extreme values
+            });
+        });
+    }
+
     // Clear and set data
     globe.labelsData([]);
     globe.ringsData([]);  // Clear any rings
-    globe.pointsData(allPoints);
-    globe.arcsData(arcs);
+    globe.pointsData(showHeatmap ? [] : allPoints);  // Hide points in heatmap mode
+    globe.arcsData(showHeatmap ? [] : arcs);  // Hide arcs in heatmap mode
+    globe.heatmapsData(showHeatmap ? [heatmapData] : []);
 }
 
 // Render beacon points (beacon mode)
@@ -752,4 +799,5 @@ loadBtn.addEventListener('click', loadWSPRData);
 animateLinesEl.addEventListener('change', rerenderArcs);
 solidLinesEl.addEventListener('change', rerenderArcs);
 showMarkersEl.addEventListener('change', rerenderArcs);
+heatmapModeEl.addEventListener('change', rerenderArcs);
 
