@@ -17,16 +17,63 @@
             <button class="sidebar-close" id="sidebarClose" title="Close sidebar">✕</button>
         </div>
 
+        <!-- How to Use Accordion -->
+        <div class="accordion">
+            <button class="accordion-header" id="howToUseToggle">
+                <span>How to Use</span>
+                <span class="accordion-icon">▼</span>
+            </button>
+            <div class="accordion-content" id="howToUseContent">
+                <div class="how-to-content">
+                    <h3>Getting Started</h3>
+                    <p>WSPR Globe visualizes WSPR (Weak Signal Propagation Reporter) spots on an interactive 3D globe. Each arc represents a radio propagation path between a transmitter and receiver.</p>
+                    
+                    <h3>Searching for Spots</h3>
+                    <ul>
+                        <li><strong>Call Signs:</strong> Enter a receiver or transmitter call sign to filter spots. Leave empty to see all spots.</li>
+                        <li><strong>Time Window:</strong> Select how far back in time to search (from 5 minutes to 7 days).</li>
+                        <li><strong>Frequency Bands:</strong> Check/uncheck bands to include or exclude specific frequencies.</li>
+                        <li><strong>Load WSPR Spots:</strong> Click the button to fetch and display spots matching your criteria.</li>
+                    </ul>
+                    
+                    <h3>Display Modes</h3>
+                    <ul>
+                        <li><strong>Arc Mode:</strong> Shows propagation paths as arcs between TX and RX locations. Arcs peak at ~300 km altitude.</li>
+                        <li><strong>Beacon Mode:</strong> Tracks a moving transmitter over time, showing its location at each 2-minute interval.</li>
+                        <li><strong>Heatmap Mode:</strong> Color-codes regions by contact density (most active areas are brightest).</li>
+                    </ul>
+                    
+                    <h3>Visualization Options</h3>
+                    <ul>
+                        <li><strong>Animate Lines:</strong> Adds a moving "dot dot dot" pattern along arcs.</li>
+                        <li><strong>Solid Lines:</strong> Makes arcs fully opaque (default is semi-transparent).</li>
+                        <li><strong>Show TX/RX Markers:</strong> Displays solid circles at transmitters and open circles at receivers.</li>
+                        <li><strong>Max Lines:</strong> Limits the number of arcs displayed for better performance.</li>
+                    </ul>
+                    
+                    <h3>Interacting with the Globe</h3>
+                    <ul>
+                        <li><strong>Rotate:</strong> Click and drag to rotate the globe.</li>
+                        <li><strong>Zoom:</strong> Scroll to zoom in/out.</li>
+                        <li><strong>Details:</strong> Click on any arc or point to see spot details (callsigns, distance, frequency, SNR, power, time).</li>
+                    </ul>
+                    
+                    <h3>Statistics Panel</h3>
+                    <p>After loading spots, view statistics including total spots, unique paths, furthest contact distance, most active band, and SNR metrics.</p>
+                </div>
+            </div>
+        </div>
+
         <h2>Call Sign Filters</h2>
         <div class="form-group">
             <label for="rxCallsign">Receiver Call Sign</label>
-            <input type="text" id="rxCallsign" placeholder="e.g., K6AUS" style="text-transform: uppercase;">
+            <input type="text" id="rxCallsign" value="K6AUS" placeholder="e.g., K6AUS" style="text-transform: uppercase;">
             <div class="help-text">Leave empty for all receivers</div>
         </div>
 
         <div class="form-group">
             <label for="txCallsign">Transmitter Call Sign</label>
-            <input type="text" id="txCallsign" placeholder="e.g., W1AW" style="text-transform: uppercase;">
+            <input type="text" id="txCallsign" value="K6AUS" placeholder="e.g., K6AUS" style="text-transform: uppercase;">
             <div class="help-text">Leave empty for all transmitters</div>
         </div>
 

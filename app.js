@@ -33,6 +33,15 @@ function closeSidebarOnMobile() {
     }
 }
 
+// Accordion functionality
+const howToUseToggle = document.getElementById('howToUseToggle');
+const howToUseContent = document.getElementById('howToUseContent');
+const accordion = howToUseToggle.closest('.accordion');
+
+howToUseToggle.addEventListener('click', () => {
+    accordion.classList.toggle('active');
+});
+
 // Popup elements
 const spotPopup = document.getElementById('spotPopup');
 const popupContent = document.getElementById('popupContent');
