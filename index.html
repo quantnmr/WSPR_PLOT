@@ -7,9 +7,15 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Sidebar Toggle Button (for mobile and collapsed state) -->
+    <button class="sidebar-toggle" id="sidebarToggle" title="Toggle sidebar">☰</button>
+
     <!-- Left Sidebar -->
-    <div class="sidebar">
-        <h1>WSPR Plot</h1>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h1>WSPR Plot</h1>
+            <button class="sidebar-close" id="sidebarClose" title="Close sidebar">✕</button>
+        </div>
 
         <h2>Call Sign Filters</h2>
         <div class="form-group">

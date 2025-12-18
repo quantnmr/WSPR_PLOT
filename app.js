@@ -1,5 +1,38 @@
 // WSPR Plot Application
 
+// Sidebar toggle functionality
+const sidebar = document.getElementById('sidebar');
+const sidebarToggle = document.getElementById('sidebarToggle');
+const sidebarClose = document.getElementById('sidebarClose');
+
+function toggleSidebar() {
+    sidebar.classList.toggle('collapsed');
+    sidebarToggle.classList.toggle('visible', sidebar.classList.contains('collapsed'));
+    // Trigger resize after animation
+    setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+    }, 300);
+}
+
+sidebarToggle.addEventListener('click', toggleSidebar);
+sidebarClose.addEventListener('click', toggleSidebar);
+
+// Auto-collapse sidebar on mobile
+function checkMobile() {
+    if (window.innerWidth <= 768) {
+        sidebar.classList.add('collapsed');
+        sidebarToggle.classList.add('visible');
+    }
+}
+checkMobile();
+
+// Close sidebar on mobile after loading (so user can see results)
+function closeSidebarOnMobile() {
+    if (window.innerWidth <= 768 && !sidebar.classList.contains('collapsed')) {
+        toggleSidebar();
+    }
+}
+
 // DOM Elements
 const container = document.getElementById('globeContainer');
 const loadBtn = document.getElementById('loadBtn');
@@ -336,6 +369,9 @@ async function loadWSPRData() {
             const arcCount = globe.arcsData().length;
             setStatus(`Loaded ${arcCount} unique paths from ${data.data.length} spots`, 'success');
         }
+
+        // Close sidebar on mobile so user can see results
+        closeSidebarOnMobile();
 
     } catch (error) {
         console.error('Error loading WSPR data:', error);

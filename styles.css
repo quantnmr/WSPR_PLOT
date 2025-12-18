@@ -18,6 +18,36 @@ body {
     display: flex;
 }
 
+/* Sidebar Toggle Button */
+.sidebar-toggle {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 200;
+    background: #1a1a2e;
+    color: #4fc3f7;
+    border: 1px solid #333;
+    border-radius: 4px;
+    width: 40px;
+    height: 40px;
+    font-size: 1.4em;
+    cursor: pointer;
+    display: none;  /* Hidden when sidebar is open */
+    opacity: 0.9;
+}
+
+.sidebar-toggle:hover {
+    background: #252540;
+    opacity: 1;
+}
+
+/* Show toggle when sidebar is collapsed */
+.sidebar-toggle.visible {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 /* Left Sidebar */
 .sidebar {
     width: 280px;
@@ -29,6 +59,47 @@ body {
     overflow-y: auto;
     border-right: 1px solid #333;
     z-index: 100;
+    transition: transform 0.3s ease, width 0.3s ease;
+}
+
+.sidebar.collapsed {
+    transform: translateX(-100%);
+    width: 0;
+    min-width: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+}
+
+.sidebar-header h1 {
+    font-size: 1.4em;
+    color: #4fc3f7;
+    margin: 0;
+    border: none;
+    padding: 0;
+}
+
+.sidebar-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 1.2em;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.sidebar-close:hover {
+    background: #333;
+    color: #fff;
 }
 
 .sidebar h1 {
@@ -259,5 +330,74 @@ body {
     padding: 8px 12px;
     border-radius: 4px;
     font-size: 12px;
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+    .sidebar-toggle {
+        display: block;  /* Always show on mobile */
+    }
+    
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        transform: translateX(0);
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+    }
+    
+    .sidebar.collapsed {
+        transform: translateX(-100%);
+    }
+    
+    #globeContainer {
+        width: 100%;
+    }
+    
+    .globe-info {
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        text-align: center;
+    }
+    
+    /* Larger touch targets on mobile */
+    .form-group input[type="text"],
+    .form-group select {
+        padding: 12px;
+        font-size: 16px;  /* Prevents iOS zoom on focus */
+    }
+    
+    .btn {
+        padding: 14px;
+        font-size: 1em;
+    }
+    
+    .checkbox-label {
+        padding: 8px 0;
+    }
+    
+    .checkbox-label input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .band-checkbox {
+        padding: 6px 0;
+    }
+    
+    .band-checkbox input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+/* Small phones */
+@media (max-width: 400px) {
+    .sidebar {
+        width: 100%;
+        min-width: 100%;
+    }
 }
 
