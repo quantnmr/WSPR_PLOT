@@ -371,6 +371,8 @@ function renderArcs() {
     
     const arcs = [];
     const seen = new Set();
+    const txLocations = new Map(); // Track unique TX locations
+    const rxLocations = new Map(); // Track unique RX locations
     
     for (const spot of currentSpots) {
         const freqMHz = spot.frequency / 1000000;
@@ -393,6 +395,26 @@ function renderArcs() {
         seen.add(pathKey);
 
         let color = getBandColor(freqMHz);
+        
+        // Track TX location
+        if (!txLocations.has(spot.tx_loc)) {
+            txLocations.set(spot.tx_loc, {
+                lat: txLoc.lat,
+                lng: txLoc.lng,
+                color: color,
+                type: 'tx'
+            });
+        }
+        
+        // Track RX location
+        if (!rxLocations.has(spot.rx_loc)) {
+            rxLocations.set(spot.rx_loc, {
+                lat: rxLoc.lat,
+                lng: rxLoc.lng,
+                color: color,
+                type: 'rx'
+            });
+        }
         
         if (useTransparency) {
             color = hexToRgba(color, 0.4);
@@ -418,8 +440,44 @@ function renderArcs() {
     globe.arcStroke(0.3);
     globe.arcAltitudeAutoScale(0.3);
 
-    globe.pointsData([]);  // Clear points
+    // Create solid points for TX locations
+    const txPoints = [];
+    txLocations.forEach(loc => {
+        txPoints.push({
+            lat: loc.lat,
+            lng: loc.lng,
+            color: loc.color,
+            size: 0.35
+        });
+    });
+    
+    // Create rings for RX locations
+    const rxRings = [];
+    rxLocations.forEach((loc, key) => {
+        // Skip if it's also a TX location
+        if (!txLocations.has(key)) {
+            rxRings.push({
+                lat: loc.lat,
+                lng: loc.lng,
+                color: 'rgba(255, 255, 255, 0.7)'
+            });
+        }
+    });
+    
+    // Configure TX points (solid circles)
+    globe.pointRadius(d => d.size);
+    globe.pointColor(d => d.color);
+    globe.pointAltitude(0.005);
+    
+    // Configure RX rings (open circles)
+    globe.ringsData(rxRings);
+    globe.ringColor(d => d.color);
+    globe.ringMaxRadius(0.5);
+    globe.ringPropagationSpeed(0);
+    globe.ringRepeatPeriod(0);
+
     globe.labelsData([]);  // Clear labels
+    globe.pointsData(txPoints);
     globe.arcsData(arcs);
 }
 
@@ -520,6 +578,7 @@ function renderBeaconPoints() {
         }
     }
     
+    globe.ringsData([]);  // Clear rings in beacon mode
     globe.arcsData(pathArcs);
     globe.pointsData(points);
     globe.labelsData(labels);
