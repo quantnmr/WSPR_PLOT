@@ -34,7 +34,7 @@
                         <li><strong>Call Signs:</strong> Enter a receiver or transmitter call sign to filter spots. Leave empty to see all spots.</li>
                         <li><strong>Time Window:</strong> Select how far back in time to search (from 5 minutes to 7 days).</li>
                         <li><strong>Days Ago:</strong> Offset the time window by selecting how many days in the past to search (0-7 days).</li>
-                        <li><strong>Hours Ago:</strong> Add an additional hour offset (0-23 hours). Combined with Days Ago, this allows precise time window positioning. For example, "Last 15 Minutes" with "1 Day Ago" and "3 Hours Ago" searches for the same 15-minute window from 27 hours ago.</li>
+                        <li><strong>Hours Ago:</strong> Add an additional hour offset (0-23 hours). Combined with Days Ago, this allows precise time window positioning. The time window finishes at the offset point and extends backward by the selected duration. For example, "Last 15 Minutes" with "2 Days Ago" and "4 Hours Ago" searches for a 15-minute window that finishes at 2 days and 4 hours ago (and starts 15 minutes before that).</li>
                         <li><strong>Frequency Bands:</strong> Check/uncheck bands to include or exclude specific frequencies.</li>
                         <li><strong>Load WSPR Spots:</strong> Click the button to fetch and display spots matching your criteria.</li>
                     </ul>
