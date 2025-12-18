@@ -482,7 +482,13 @@ function renderArcs() {
     globe.ringPropagationSpeed(0);
     globe.ringRepeatPeriod(0);
 
-    globe.labelsData([]);  // Clear labels
+    // Clear all data first, then set new data
+    globe.labelsData([]);
+    globe.ringsData([]);  // Clear rings first
+    globe.pointsData([]);  // Clear points first
+    globe.arcsData([]);  // Clear arcs first
+    
+    // Now set new data
     globe.pointsData(txPoints);
     globe.ringsData(rxRings);
     globe.arcsData(arcs);
