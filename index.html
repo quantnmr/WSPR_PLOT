@@ -33,7 +33,8 @@
                     <ul>
                         <li><strong>Call Signs:</strong> Enter a receiver or transmitter call sign to filter spots. Leave empty to see all spots.</li>
                         <li><strong>Time Window:</strong> Select how far back in time to search (from 5 minutes to 7 days).</li>
-                        <li><strong>Days Ago:</strong> Offset the time window by selecting how many days in the past to search (0-7 days). For example, "Last 15 Minutes" with "1 Day Ago" searches for the same 15-minute window from yesterday.</li>
+                        <li><strong>Days Ago:</strong> Offset the time window by selecting how many days in the past to search (0-7 days).</li>
+                        <li><strong>Hours Ago:</strong> Add an additional hour offset (0-23 hours). Combined with Days Ago, this allows precise time window positioning. For example, "Last 15 Minutes" with "1 Day Ago" and "3 Hours Ago" searches for the same 15-minute window from 27 hours ago.</li>
                         <li><strong>Frequency Bands:</strong> Check/uncheck bands to include or exclude specific frequencies.</li>
                         <li><strong>Load WSPR Spots:</strong> Click the button to fetch and display spots matching your criteria.</li>
                     </ul>
@@ -109,6 +110,37 @@
                 <option value="7">7 Days Ago</option>
             </select>
             <div class="help-text">Offset the time window by this many days</div>
+        </div>
+        
+        <div class="form-group">
+            <label for="hoursAgo">Hours Ago</label>
+            <select id="hoursAgo">
+                <option value="0" selected>Now</option>
+                <option value="1">1 Hour Ago</option>
+                <option value="2">2 Hours Ago</option>
+                <option value="3">3 Hours Ago</option>
+                <option value="4">4 Hours Ago</option>
+                <option value="5">5 Hours Ago</option>
+                <option value="6">6 Hours Ago</option>
+                <option value="7">7 Hours Ago</option>
+                <option value="8">8 Hours Ago</option>
+                <option value="9">9 Hours Ago</option>
+                <option value="10">10 Hours Ago</option>
+                <option value="11">11 Hours Ago</option>
+                <option value="12">12 Hours Ago</option>
+                <option value="13">13 Hours Ago</option>
+                <option value="14">14 Hours Ago</option>
+                <option value="15">15 Hours Ago</option>
+                <option value="16">16 Hours Ago</option>
+                <option value="17">17 Hours Ago</option>
+                <option value="18">18 Hours Ago</option>
+                <option value="19">19 Hours Ago</option>
+                <option value="20">20 Hours Ago</option>
+                <option value="21">21 Hours Ago</option>
+                <option value="22">22 Hours Ago</option>
+                <option value="23">23 Hours Ago</option>
+            </select>
+            <div class="help-text">Additional hour offset (combined with days)</div>
         </div>
 
         <h2>Display Options</h2>

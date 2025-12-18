@@ -281,6 +281,7 @@ const rxCallsignEl = document.getElementById('rxCallsign');
 const txCallsignEl = document.getElementById('txCallsign');
 const timeWindowEl = document.getElementById('timeWindow');
 const daysAgoEl = document.getElementById('daysAgo');
+const hoursAgoEl = document.getElementById('hoursAgo');
 const maxLinesEl = document.getElementById('maxLines');
 const animateLinesEl = document.getElementById('animateLines');
 const solidLinesEl = document.getElementById('solidLines');
@@ -586,10 +587,11 @@ async function loadWSPRData() {
         // Build query for wspr.live API
         const now = new Date();
         const daysAgo = parseInt(daysAgoEl.value) || 0;
-        // Calculate start time: subtract days, then subtract the time window
-        const baseTime = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+        const hoursAgo = parseInt(hoursAgoEl.value) || 0;
+        // Calculate start time: subtract days and hours, then subtract the time window
+        const baseTime = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000 - hoursAgo * 60 * 60 * 1000);
         const startTime = new Date(baseTime.getTime() - timeWindow * 60 * 1000);
-        const endTime = baseTime; // End time is the base time (now minus days ago)
+        const endTime = baseTime; // End time is the base time (now minus days and hours ago)
         const startStr = startTime.toISOString().slice(0, 19).replace('T', ' ');
         const endStr = endTime.toISOString().slice(0, 19).replace('T', ' ');
 
