@@ -444,53 +444,44 @@ function renderArcs() {
     // Check if markers should be shown
     const showMarkers = showMarkersEl.checked;
     
-    let txPoints = [];
-    let rxRings = [];
+    let allPoints = [];
     
     if (showMarkers) {
-        // Create solid points for TX locations
+        // Create solid points for TX locations (colored by band)
         txLocations.forEach(loc => {
-            txPoints.push({
+            allPoints.push({
                 lat: loc.lat,
                 lng: loc.lng,
                 color: loc.color,
-                size: 0.18  // Reduced size
+                size: 0.18,
+                type: 'tx'
             });
         });
         
-        // Create rings for RX locations
+        // Create points for RX locations (white, smaller)
         rxLocations.forEach((loc, key) => {
             // Skip if it's also a TX location
             if (!txLocations.has(key)) {
-                rxRings.push({
+                allPoints.push({
                     lat: loc.lat,
                     lng: loc.lng,
-                    color: 'rgba(255, 255, 255, 0.7)'
+                    color: 'rgba(255, 255, 255, 0.6)',
+                    size: 0.12,  // Smaller than TX
+                    type: 'rx'
                 });
             }
         });
     }
     
-    // Configure TX points (solid circles)
+    // Configure points
     globe.pointRadius(d => d.size);
     globe.pointColor(d => d.color);
     globe.pointAltitude(0.005);
-    
-    // Configure RX rings (open circles)
-    globe.ringColor(d => d.color);
-    globe.ringMaxRadius(0.25);  // Reduced size
-    globe.ringPropagationSpeed(0);
-    globe.ringRepeatPeriod(0);
 
-    // Clear all data first, then set new data
+    // Clear and set data
     globe.labelsData([]);
-    globe.ringsData([]);  // Clear rings first
-    globe.pointsData([]);  // Clear points first
-    globe.arcsData([]);  // Clear arcs first
-    
-    // Now set new data
-    globe.pointsData(txPoints);
-    globe.ringsData(rxRings);
+    globe.ringsData([]);  // Clear any rings
+    globe.pointsData(allPoints);
     globe.arcsData(arcs);
 }
 
