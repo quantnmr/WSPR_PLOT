@@ -10,6 +10,7 @@ const timeWindowEl = document.getElementById('timeWindow');
 const maxLinesEl = document.getElementById('maxLines');
 const animateLinesEl = document.getElementById('animateLines');
 const solidLinesEl = document.getElementById('solidLines');
+const showMarkersEl = document.getElementById('showMarkers');
 const beaconModeEl = document.getElementById('beaconMode');
 const arcOptionsEl = document.getElementById('arcOptions');
 const frequencyLegendEl = document.getElementById('frequencyLegend');
@@ -440,29 +441,35 @@ function renderArcs() {
     globe.arcStroke(0.3);
     globe.arcAltitudeAutoScale(0.3);
 
-    // Create solid points for TX locations
-    const txPoints = [];
-    txLocations.forEach(loc => {
-        txPoints.push({
-            lat: loc.lat,
-            lng: loc.lng,
-            color: loc.color,
-            size: 0.35
-        });
-    });
+    // Check if markers should be shown
+    const showMarkers = showMarkersEl.checked;
     
-    // Create rings for RX locations
-    const rxRings = [];
-    rxLocations.forEach((loc, key) => {
-        // Skip if it's also a TX location
-        if (!txLocations.has(key)) {
-            rxRings.push({
+    let txPoints = [];
+    let rxRings = [];
+    
+    if (showMarkers) {
+        // Create solid points for TX locations
+        txLocations.forEach(loc => {
+            txPoints.push({
                 lat: loc.lat,
                 lng: loc.lng,
-                color: 'rgba(255, 255, 255, 0.7)'
+                color: loc.color,
+                size: 0.18  // Reduced size
             });
-        }
-    });
+        });
+        
+        // Create rings for RX locations
+        rxLocations.forEach((loc, key) => {
+            // Skip if it's also a TX location
+            if (!txLocations.has(key)) {
+                rxRings.push({
+                    lat: loc.lat,
+                    lng: loc.lng,
+                    color: 'rgba(255, 255, 255, 0.7)'
+                });
+            }
+        });
+    }
     
     // Configure TX points (solid circles)
     globe.pointRadius(d => d.size);
@@ -470,14 +477,14 @@ function renderArcs() {
     globe.pointAltitude(0.005);
     
     // Configure RX rings (open circles)
-    globe.ringsData(rxRings);
     globe.ringColor(d => d.color);
-    globe.ringMaxRadius(0.5);
+    globe.ringMaxRadius(0.25);  // Reduced size
     globe.ringPropagationSpeed(0);
     globe.ringRepeatPeriod(0);
 
     globe.labelsData([]);  // Clear labels
     globe.pointsData(txPoints);
+    globe.ringsData(rxRings);
     globe.arcsData(arcs);
 }
 
@@ -593,4 +600,5 @@ function rerenderArcs() {
 loadBtn.addEventListener('click', loadWSPRData);
 animateLinesEl.addEventListener('change', rerenderArcs);
 solidLinesEl.addEventListener('change', rerenderArcs);
+showMarkersEl.addEventListener('change', rerenderArcs);
 
