@@ -247,6 +247,157 @@ const animateLinesEl = document.getElementById('animateLines');
 const solidLinesEl = document.getElementById('solidLines');
 const showMarkersEl = document.getElementById('showMarkers');
 const heatmapModeEl = document.getElementById('heatmapMode');
+const showTerminatorEl = document.getElementById('showTerminator');
+
+// Solar position calculation for accurate day/night terminator
+function getSunPosition(date = new Date()) {
+    // Calculate Julian date
+    const JD = date.getTime() / 86400000 + 2440587.5;
+    
+    // Julian centuries from J2000.0
+    const T = (JD - 2451545.0) / 36525;
+    
+    // Mean longitude of the sun (degrees)
+    let L0 = 280.46646 + 36000.76983 * T + 0.0003032 * T * T;
+    L0 = L0 % 360;
+    if (L0 < 0) L0 += 360;
+    
+    // Mean anomaly of the sun (degrees)
+    let M = 357.52911 + 35999.05029 * T - 0.0001537 * T * T;
+    M = M % 360;
+    if (M < 0) M += 360;
+    const Mrad = M * Math.PI / 180;
+    
+    // Equation of center
+    const C = (1.914602 - 0.004817 * T - 0.000014 * T * T) * Math.sin(Mrad)
+            + (0.019993 - 0.000101 * T) * Math.sin(2 * Mrad)
+            + 0.000289 * Math.sin(3 * Mrad);
+    
+    // Sun's true longitude
+    const sunLong = L0 + C;
+    const sunLongRad = sunLong * Math.PI / 180;
+    
+    // Obliquity of the ecliptic
+    const obliquity = 23.439 - 0.0000004 * (JD - 2451545.0);
+    const obliquityRad = obliquity * Math.PI / 180;
+    
+    // Sun's declination
+    const declination = Math.asin(Math.sin(obliquityRad) * Math.sin(sunLongRad)) * 180 / Math.PI;
+    
+    // Equation of time (minutes)
+    const y = Math.tan(obliquityRad / 2) * Math.tan(obliquityRad / 2);
+    const L0rad = L0 * Math.PI / 180;
+    const EoT = 4 * (y * Math.sin(2 * L0rad) 
+                   - 2 * 0.0167 * Math.sin(Mrad) 
+                   + 4 * 0.0167 * y * Math.sin(Mrad) * Math.cos(2 * L0rad)
+                   - 0.5 * y * y * Math.sin(4 * L0rad)
+                   - 1.25 * 0.0167 * 0.0167 * Math.sin(2 * Mrad)) * 180 / Math.PI;
+    
+    // Solar noon in minutes from midnight UTC
+    const solarNoon = 720 - EoT;
+    
+    // Current time in minutes from midnight UTC
+    const currentMinutes = date.getUTCHours() * 60 + date.getUTCMinutes() + date.getUTCSeconds() / 60;
+    
+    // Hour angle in degrees (negative before noon, positive after)
+    const hourAngle = (currentMinutes - solarNoon) * 0.25;
+    
+    // Subsolar longitude (where sun is directly overhead)
+    let subsolarLng = -hourAngle;
+    if (subsolarLng > 180) subsolarLng -= 360;
+    if (subsolarLng < -180) subsolarLng += 360;
+    
+    return {
+        lat: declination,
+        lng: subsolarLng
+    };
+}
+
+// Generate terminator polygon (night side)
+function getTerminatorPolygon(sunPos) {
+    const points = [];
+    const numPoints = 72; // Points around the terminator
+    
+    // Convert sun position to radians
+    const sunLatRad = sunPos.lat * Math.PI / 180;
+    const sunLngRad = sunPos.lng * Math.PI / 180;
+    
+    // Generate points along the terminator (great circle perpendicular to sun direction)
+    for (let i = 0; i <= numPoints; i++) {
+        const angle = (i / numPoints) * 2 * Math.PI;
+        
+        // Point on terminator in sun-centered coordinates
+        const x = Math.cos(angle);
+        const y = Math.sin(angle);
+        const z = 0;
+        
+        // Rotate to align with sun position
+        // First rotate around Y axis by sun longitude
+        const x1 = x * Math.cos(sunLngRad) - z * Math.sin(sunLngRad);
+        const y1 = y;
+        const z1 = x * Math.sin(sunLngRad) + z * Math.cos(sunLngRad);
+        
+        // Then rotate around X axis by (90 - sun latitude)
+        const tilt = (90 - sunPos.lat) * Math.PI / 180;
+        const x2 = x1;
+        const y2 = y1 * Math.cos(tilt) - z1 * Math.sin(tilt);
+        const z2 = y1 * Math.sin(tilt) + z1 * Math.cos(tilt);
+        
+        // Convert back to lat/lng
+        const lat = Math.asin(z2) * 180 / Math.PI;
+        let lng = Math.atan2(y2, x2) * 180 / Math.PI;
+        
+        points.push([lng, lat]);
+    }
+    
+    // Build night polygon - need to include the pole on the night side
+    const nightPolygon = [...points];
+    
+    // Add pole to close the polygon on the night side
+    // The night side is opposite to the sun
+    const nightLat = sunPos.lat > 0 ? -90 : 90;
+    
+    // Close the polygon through the night pole
+    nightPolygon.push([points[points.length - 1][0], nightLat]);
+    nightPolygon.push([points[0][0], nightLat]);
+    
+    return nightPolygon;
+}
+
+// Update terminator display
+let terminatorInterval = null;
+
+function updateTerminator() {
+    if (!showTerminatorEl.checked) {
+        globe.polygonsData([]);
+        return;
+    }
+    
+    const sunPos = getSunPosition();
+    const nightPoly = getTerminatorPolygon(sunPos);
+    
+    globe.polygonsData([{
+        coordinates: [nightPoly],
+        properties: { name: 'Night' }
+    }]);
+}
+
+// Start/stop terminator updates
+function toggleTerminator() {
+    if (showTerminatorEl.checked) {
+        updateTerminator();
+        // Update every 60 seconds
+        terminatorInterval = setInterval(updateTerminator, 60000);
+    } else {
+        if (terminatorInterval) {
+            clearInterval(terminatorInterval);
+            terminatorInterval = null;
+        }
+        globe.polygonsData([]);
+    }
+}
+
+showTerminatorEl.addEventListener('change', toggleTerminator);
 const beaconModeEl = document.getElementById('beaconMode');
 const arcOptionsEl = document.getElementById('arcOptions');
 const frequencyLegendEl = document.getElementById('frequencyLegend');
@@ -499,6 +650,13 @@ const globe = Globe()(container)
     .heatmapTopAltitude(0.02)
     .heatmapBandwidth(2)
     .heatmapColorSaturation(1.8)
+    // Terminator polygon configuration
+    .polygonsData([])
+    .polygonCapColor(() => 'rgba(0, 0, 30, 0.4)')
+    .polygonSideColor(() => 'rgba(0, 0, 30, 0.2)')
+    .polygonStrokeColor(() => 'rgba(255, 200, 100, 0.6)')
+    .polygonAltitude(0.001)
+    .polygonsTransitionDuration(0)
     .onGlobeReady(() => {
         globe.scene().traverse(obj => {
             if (obj.type === 'Mesh' && obj.material && obj.material.map) {
