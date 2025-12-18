@@ -159,16 +159,18 @@ body {
 .accordion-content {
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.3s ease-out;
+    padding: 0 15px;
+    transition: max-height 0.3s ease-out, padding 0.3s ease-out;
 }
 
 .accordion.active .accordion-content {
     max-height: 1000px;
-    transition: max-height 0.5s ease-in;
+    padding: 0 15px 15px 15px;
+    transition: max-height 0.5s ease-in, padding 0.3s ease-in;
 }
 
 .how-to-content {
-    padding: 15px;
+    padding: 0;
     color: #e0e0e0;
     font-size: 0.85em;
     line-height: 1.6;

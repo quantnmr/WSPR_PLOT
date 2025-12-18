@@ -34,13 +34,27 @@ function closeSidebarOnMobile() {
 }
 
 // Accordion functionality
-const howToUseToggle = document.getElementById('howToUseToggle');
-const howToUseContent = document.getElementById('howToUseContent');
-const accordion = howToUseToggle.closest('.accordion');
+function initAccordion() {
+    const howToUseToggle = document.getElementById('howToUseToggle');
+    if (!howToUseToggle) return;
+    
+    const accordion = howToUseToggle.closest('.accordion');
+    if (!accordion) return;
+    
+    // Ensure it starts closed
+    accordion.classList.remove('active');
+    
+    howToUseToggle.addEventListener('click', () => {
+        accordion.classList.toggle('active');
+    });
+}
 
-howToUseToggle.addEventListener('click', () => {
-    accordion.classList.toggle('active');
-});
+// Initialize accordion when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAccordion);
+} else {
+    initAccordion();
+}
 
 // Popup elements
 const spotPopup = document.getElementById('spotPopup');
