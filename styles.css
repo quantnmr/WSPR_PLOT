@@ -245,6 +245,37 @@ body {
     color: #e57373;
 }
 
+/* Stats Panel */
+.stats-panel {
+    margin-top: 15px;
+    padding: 12px;
+    background: #252540;
+    border-radius: 4px;
+    border: 1px solid #333;
+}
+
+.stats-panel h2 {
+    margin: 0 0 10px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #333;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    font-size: 0.85em;
+}
+
+.stat-label {
+    color: #888;
+}
+
+.stat-value {
+    color: #4fc3f7;
+    font-weight: 500;
+}
+
 /* Frequency band legend */
 .band-legend {
     margin-top: 20px;

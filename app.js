@@ -129,6 +129,112 @@ function showSpotDetails(spot) {
     spotPopup.classList.add('visible');
 }
 
+// Stats panel elements
+const statsPanel = document.getElementById('statsPanel');
+const statTotalSpots = document.getElementById('statTotalSpots');
+const statUniquePaths = document.getElementById('statUniquePaths');
+const statFurthest = document.getElementById('statFurthest');
+const statActiveBand = document.getElementById('statActiveBand');
+const statAvgSNR = document.getElementById('statAvgSNR');
+const statBestSNR = document.getElementById('statBestSNR');
+
+// Calculate and display statistics
+function updateStats() {
+    if (!currentSpots || currentSpots.length === 0) {
+        statsPanel.style.display = 'none';
+        return;
+    }
+    
+    statsPanel.style.display = 'block';
+    
+    const selectedBands = getSelectedBands();
+    const filteredSpots = currentSpots.filter(spot => {
+        const freqMHz = spot.frequency / 1000000;
+        return isFrequencySelected(freqMHz);
+    });
+    
+    // Total spots
+    statTotalSpots.textContent = filteredSpots.length.toLocaleString();
+    
+    // Unique paths
+    const uniquePaths = new Set();
+    filteredSpots.forEach(spot => {
+        const locs = [spot.tx_loc, spot.rx_loc].sort();
+        uniquePaths.add(`${locs[0]}-${locs[1]}`);
+    });
+    statUniquePaths.textContent = uniquePaths.size.toLocaleString();
+    
+    // Furthest contact
+    let maxDistance = 0;
+    let furthestSpot = null;
+    filteredSpots.forEach(spot => {
+        const txLoc = gridToLatLng(spot.tx_loc);
+        const rxLoc = gridToLatLng(spot.rx_loc);
+        if (txLoc && rxLoc) {
+            const dist = calculateDistance(txLoc.lat, txLoc.lng, rxLoc.lat, rxLoc.lng);
+            if (dist > maxDistance) {
+                maxDistance = dist;
+                furthestSpot = spot;
+            }
+        }
+    });
+    if (furthestSpot) {
+        statFurthest.textContent = `${maxDistance.toLocaleString()} km`;
+        statFurthest.title = `${furthestSpot.tx_sign} → ${furthestSpot.rx_sign}`;
+    } else {
+        statFurthest.textContent = '-';
+    }
+    
+    // Most active band
+    const bandCounts = {};
+    filteredSpots.forEach(spot => {
+        const freqMHz = spot.frequency / 1000000;
+        let bandName = 'Unknown';
+        
+        // Find closest band
+        let minDiff = Infinity;
+        for (const band of Object.keys(bandColors)) {
+            const diff = Math.abs(freqMHz - parseFloat(band));
+            if (diff < minDiff) {
+                minDiff = diff;
+                bandName = parseFloat(band) < 1 ? `${(parseFloat(band) * 1000).toFixed(0)} kHz` : `${band} MHz`;
+            }
+        }
+        bandCounts[bandName] = (bandCounts[bandName] || 0) + 1;
+    });
+    
+    let mostActiveBand = '-';
+    let maxCount = 0;
+    for (const [band, count] of Object.entries(bandCounts)) {
+        if (count > maxCount) {
+            maxCount = count;
+            mostActiveBand = `${band} (${count})`;
+        }
+    }
+    statActiveBand.textContent = mostActiveBand;
+    
+    // Average SNR
+    const snrValues = filteredSpots.map(s => s.snr).filter(s => s !== undefined);
+    if (snrValues.length > 0) {
+        const avgSNR = snrValues.reduce((a, b) => a + b, 0) / snrValues.length;
+        statAvgSNR.textContent = `${avgSNR.toFixed(1)} dB`;
+    } else {
+        statAvgSNR.textContent = '-';
+    }
+    
+    // Best SNR
+    const bestSNR = Math.max(...snrValues);
+    if (isFinite(bestSNR)) {
+        const bestSpot = filteredSpots.find(s => s.snr === bestSNR);
+        statBestSNR.textContent = `${bestSNR} dB`;
+        if (bestSpot) {
+            statBestSNR.title = `${bestSpot.tx_sign} → ${bestSpot.rx_sign}`;
+        }
+    } else {
+        statBestSNR.textContent = '-';
+    }
+}
+
 // DOM Elements
 const container = document.getElementById('globeContainer');
 const loadBtn = document.getElementById('loadBtn');
@@ -519,6 +625,9 @@ function rerenderData() {
         const arcCount = globe.arcsData().length;
         setStatus(`Showing ${arcCount} unique paths (filtered from ${currentSpots.length} spots)`, 'success');
     }
+    
+    // Update statistics
+    updateStats();
 }
 
 // Render arcs (normal mode)
