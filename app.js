@@ -33,6 +33,102 @@ function closeSidebarOnMobile() {
     }
 }
 
+// Popup elements
+const spotPopup = document.getElementById('spotPopup');
+const popupContent = document.getElementById('popupContent');
+const popupClose = document.getElementById('popupClose');
+
+// Close popup handler
+popupClose.addEventListener('click', () => {
+    spotPopup.classList.remove('visible');
+});
+
+// Close popup when clicking outside
+document.addEventListener('click', (e) => {
+    if (spotPopup.classList.contains('visible') && 
+        !spotPopup.contains(e.target) && 
+        !e.target.closest('canvas')) {
+        spotPopup.classList.remove('visible');
+    }
+});
+
+// Calculate distance between two lat/lng points (Haversine formula)
+function calculateDistance(lat1, lng1, lat2, lng2) {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return Math.round(R * c);
+}
+
+// Format frequency for display
+function formatFrequency(freqHz) {
+    const freqMHz = freqHz / 1000000;
+    if (freqMHz < 1) {
+        return (freqHz / 1000).toFixed(1) + ' kHz';
+    }
+    return freqMHz.toFixed(3) + ' MHz';
+}
+
+// Show spot details popup
+function showSpotDetails(spot) {
+    const txLoc = gridToLatLng(spot.tx_loc);
+    const rxLoc = gridToLatLng(spot.rx_loc);
+    const distance = txLoc && rxLoc ? calculateDistance(txLoc.lat, txLoc.lng, rxLoc.lat, rxLoc.lng) : 'N/A';
+    
+    const time = new Date(spot.time);
+    const timeStr = time.toISOString().slice(0, 19).replace('T', ' ') + ' UTC';
+    
+    popupContent.innerHTML = `
+        <h3>Spot Details</h3>
+        <div class="detail-row">
+            <span class="detail-label">Transmitter</span>
+            <span class="detail-value highlight">${spot.tx_sign || 'Unknown'}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">TX Grid</span>
+            <span class="detail-value">${spot.tx_loc || 'Unknown'}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Receiver</span>
+            <span class="detail-value highlight">${spot.rx_sign || 'Unknown'}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">RX Grid</span>
+            <span class="detail-value">${spot.rx_loc || 'Unknown'}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Distance</span>
+            <span class="detail-value">${distance.toLocaleString()} km</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Frequency</span>
+            <span class="detail-value">${formatFrequency(spot.frequency)}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">SNR</span>
+            <span class="detail-value">${spot.snr} dB</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">TX Power</span>
+            <span class="detail-value">${spot.power} dBm</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Drift</span>
+            <span class="detail-value">${spot.drift} Hz</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Time</span>
+            <span class="detail-value">${timeStr}</span>
+        </div>
+    `;
+    
+    spotPopup.classList.add('visible');
+}
+
 // DOM Elements
 const container = document.getElementById('globeContainer');
 const loadBtn = document.getElementById('loadBtn');
@@ -273,6 +369,21 @@ const globe = Globe()(container)
     .labelDotRadius(0.3)
     .labelText('text')
     .labelsTransitionDuration(0)
+    // Click handler for arcs
+    .onArcClick((arc) => {
+        if (arc && arc.spot) {
+            showSpotDetails(arc.spot);
+        }
+    })
+    // Click handler for points
+    .onPointClick((point) => {
+        if (point && point.spot) {
+            showSpotDetails(point.spot);
+        }
+    })
+    // Hover labels
+    .arcLabel(d => d.spot ? `${d.spot.tx_sign} → ${d.spot.rx_sign}` : '')
+    .pointLabel(d => d.label || '')
     .onGlobeReady(() => {
         globe.scene().traverse(obj => {
             if (obj.type === 'Mesh' && obj.material && obj.material.map) {
@@ -433,23 +544,25 @@ function renderArcs() {
 
         let color = getBandColor(freqMHz);
         
-        // Track TX location
+        // Track TX location (store first spot for this location)
         if (!txLocations.has(spot.tx_loc)) {
             txLocations.set(spot.tx_loc, {
                 lat: txLoc.lat,
                 lng: txLoc.lng,
                 color: color,
-                type: 'tx'
+                type: 'tx',
+                spot: spot
             });
         }
         
-        // Track RX location
+        // Track RX location (store first spot for this location)
         if (!rxLocations.has(spot.rx_loc)) {
             rxLocations.set(spot.rx_loc, {
                 lat: rxLoc.lat,
                 lng: rxLoc.lng,
                 color: color,
-                type: 'rx'
+                type: 'rx',
+                spot: spot
             });
         }
         
@@ -462,7 +575,8 @@ function renderArcs() {
             startLng: txLoc.lng,
             endLat: rxLoc.lat,
             endLng: rxLoc.lng,
-            color: color
+            color: color,
+            spot: spot  // Store spot data for click handler
         });
     }
 
@@ -490,7 +604,9 @@ function renderArcs() {
                 lng: loc.lng,
                 color: loc.color,
                 size: 0.18,
-                type: 'tx'
+                type: 'tx',
+                spot: loc.spot,
+                label: loc.spot ? loc.spot.tx_sign : ''
             });
         });
         
@@ -503,7 +619,9 @@ function renderArcs() {
                     lng: loc.lng,
                     color: 'rgba(255, 255, 255, 0.6)',
                     size: 0.12,  // Smaller than TX
-                    type: 'rx'
+                    type: 'rx',
+                    spot: loc.spot,
+                    label: loc.spot ? loc.spot.rx_sign : ''
                 });
             }
         });
