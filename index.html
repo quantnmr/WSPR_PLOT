@@ -32,6 +32,7 @@
                     <ul>
                         <li><strong>Call Signs:</strong> Enter a receiver or transmitter call sign to filter spots. Leave empty to see all spots.</li>
                         <li><strong>Time Window:</strong> Select how far back in time to search (from 5 minutes to 7 days).</li>
+                        <li><strong>Days Ago:</strong> Offset the time window by selecting how many days in the past to search (0-7 days). For example, "Last 15 Minutes" with "1 Day Ago" searches for the same 15-minute window from yesterday.</li>
                         <li><strong>Frequency Bands:</strong> Check/uncheck bands to include or exclude specific frequencies.</li>
                         <li><strong>Load WSPR Spots:</strong> Click the button to fetch and display spots matching your criteria.</li>
                     </ul>
@@ -92,6 +93,21 @@
                 <option value="4320">Last 3 Days</option>
                 <option value="10080">Last 7 Days</option>
             </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="daysAgo">Days Ago</label>
+            <select id="daysAgo">
+                <option value="0" selected>Today</option>
+                <option value="1">1 Day Ago</option>
+                <option value="2">2 Days Ago</option>
+                <option value="3">3 Days Ago</option>
+                <option value="4">4 Days Ago</option>
+                <option value="5">5 Days Ago</option>
+                <option value="6">6 Days Ago</option>
+                <option value="7">7 Days Ago</option>
+            </select>
+            <div class="help-text">Offset the time window by this many days</div>
         </div>
 
         <h2>Display Options</h2>
