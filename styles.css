@@ -62,6 +62,11 @@ body {
     transition: transform 0.3s ease, width 0.3s ease;
 }
 
+.sidebar.accordion-open {
+    width: 560px;
+    min-width: 560px;
+}
+
 .sidebar.collapsed {
     transform: translateX(-100%);
     width: 0;
@@ -554,6 +559,12 @@ body {
     
     .sidebar.collapsed {
         transform: translateX(-100%);
+    }
+    
+    /* On mobile, allow sidebar to widen but cap at screen width */
+    .sidebar.accordion-open {
+        width: min(560px, 90vw);
+        min-width: min(560px, 90vw);
     }
     
     #globeContainer {

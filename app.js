@@ -45,7 +45,17 @@ function initAccordion() {
     accordion.classList.remove('active');
     
     howToUseToggle.addEventListener('click', () => {
-        accordion.classList.toggle('active');
+        const isActive = accordion.classList.toggle('active');
+        // Widen sidebar when accordion opens
+        if (isActive) {
+            sidebar.classList.add('accordion-open');
+        } else {
+            sidebar.classList.remove('accordion-open');
+        }
+        // Trigger resize after animation
+        setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+        }, 300);
     });
 }
 
