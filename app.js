@@ -41,21 +41,26 @@ function initAccordion() {
     const accordion = howToUseToggle.closest('.accordion');
     if (!accordion) return;
     
+    const sidebarEl = document.getElementById('sidebar');
+    if (!sidebarEl) return;
+    
     // Ensure it starts closed
     accordion.classList.remove('active');
     
     howToUseToggle.addEventListener('click', () => {
         const isActive = accordion.classList.toggle('active');
-        // Widen sidebar when accordion opens
-        if (isActive) {
-            sidebar.classList.add('accordion-open');
-        } else {
-            sidebar.classList.remove('accordion-open');
+        // Widen sidebar when accordion opens (only if not collapsed)
+        if (!sidebarEl.classList.contains('collapsed')) {
+            if (isActive) {
+                sidebarEl.classList.add('accordion-open');
+            } else {
+                sidebarEl.classList.remove('accordion-open');
+            }
         }
         // Trigger resize after animation
         setTimeout(() => {
             window.dispatchEvent(new Event('resize'));
-        }, 300);
+        }, 350);
     });
 }
 
