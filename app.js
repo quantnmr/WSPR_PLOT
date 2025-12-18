@@ -374,12 +374,22 @@ function updateTerminator() {
     }
     
     const sunPos = getSunPosition();
-    const nightPoly = getTerminatorPolygon(sunPos);
+    console.log('Sun position:', sunPos);
     
-    globe.polygonsData([{
-        coordinates: [nightPoly],
+    const nightPoly = getTerminatorPolygon(sunPos);
+    console.log('Night polygon points:', nightPoly.length);
+    
+    // GeoJSON format for globe.gl
+    const geoJson = {
+        type: 'Feature',
+        geometry: {
+            type: 'Polygon',
+            coordinates: [nightPoly]
+        },
         properties: { name: 'Night' }
-    }]);
+    };
+    
+    globe.polygonsData([geoJson]);
 }
 
 // Start/stop terminator updates
@@ -652,10 +662,11 @@ const globe = Globe()(container)
     .heatmapColorSaturation(1.8)
     // Terminator polygon configuration
     .polygonsData([])
-    .polygonCapColor(() => 'rgba(0, 0, 30, 0.4)')
-    .polygonSideColor(() => 'rgba(0, 0, 30, 0.2)')
-    .polygonStrokeColor(() => 'rgba(255, 200, 100, 0.6)')
-    .polygonAltitude(0.001)
+    .polygonGeoJsonGeometry(d => d.geometry)
+    .polygonCapColor(() => 'rgba(0, 0, 40, 0.5)')
+    .polygonSideColor(() => 'rgba(0, 0, 40, 0.3)')
+    .polygonStrokeColor(() => 'rgba(255, 180, 50, 0.8)')
+    .polygonAltitude(0.002)
     .polygonsTransitionDuration(0)
     .onGlobeReady(() => {
         globe.scene().traverse(obj => {
