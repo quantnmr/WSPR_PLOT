@@ -337,6 +337,7 @@ const txCallsignEl = document.getElementById('txCallsign');
 const timeWindowEl = document.getElementById('timeWindow');
 const daysAgoEl = document.getElementById('daysAgo');
 const hoursAgoEl = document.getElementById('hoursAgo');
+const maxLinesToDisplayEl = document.getElementById('maxLinesToDisplay');
 const maxLinesEl = document.getElementById('maxLines');
 const animateLinesEl = document.getElementById('animateLines');
 const solidLinesEl = document.getElementById('solidLines');
@@ -623,6 +624,41 @@ function renderTimelapseWindow() {
         });
     }
     
+    // Apply max lines to display limit (randomly sample if needed)
+    const maxLinesToDisplay = maxLinesToDisplayEl.value;
+    if (maxLinesToDisplay !== 'all' && arcs.length > parseInt(maxLinesToDisplay)) {
+        // Randomly shuffle and take first N
+        for (let i = arcs.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arcs[i], arcs[j]] = [arcs[j], arcs[i]];
+        }
+        arcs.splice(parseInt(maxLinesToDisplay));
+        
+        // Also filter txLocations and rxLocations to only include those in sampled arcs
+        const sampledTxLocs = new Set();
+        const sampledRxLocs = new Set();
+        arcs.forEach(arc => {
+            sampledTxLocs.add(arc.spot.tx_loc);
+            sampledRxLocs.add(arc.spot.rx_loc);
+        });
+        
+        // Filter location maps
+        const filteredTxLocations = new Map();
+        const filteredRxLocations = new Map();
+        txLocations.forEach((loc, key) => {
+            if (sampledTxLocs.has(key)) filteredTxLocations.set(key, loc);
+        });
+        rxLocations.forEach((loc, key) => {
+            if (sampledRxLocs.has(key)) filteredRxLocations.set(key, loc);
+        });
+        
+        // Update references
+        txLocations.clear();
+        rxLocations.clear();
+        filteredTxLocations.forEach((v, k) => txLocations.set(k, v));
+        filteredRxLocations.forEach((v, k) => rxLocations.set(k, v));
+    }
+    
     // Update animation settings - disable path animation during time-lapse
     // (it looks jerky when time windows change quickly)
     globe.arcDashLength(1).arcDashGap(0).arcDashAnimateTime(0);
@@ -681,8 +717,24 @@ function renderTimelapseWindow() {
         // Use coarser grid during animation (2 degrees) for faster computation
         const gridSize = timelapseIsPlaying ? 2 : 1;
         
+        // If max lines to display is set, only use spots from sampled arcs
+        const maxLinesToDisplay = maxLinesToDisplayEl.value;
+        let spotsToUse = windowSpots;
+        if (maxLinesToDisplay !== 'all' && arcs.length > 0) {
+            // Use only spots that match the sampled arcs
+            const sampledPaths = new Set();
+            arcs.forEach(arc => {
+                const locs = [arc.spot.tx_loc, arc.spot.rx_loc].sort();
+                sampledPaths.add(`${locs[0]}-${locs[1]}`);
+            });
+            spotsToUse = windowSpots.filter(spot => {
+                const locs = [spot.tx_loc, spot.rx_loc].sort();
+                return sampledPaths.has(`${locs[0]}-${locs[1]}`);
+            });
+        }
+        
         // Count spots at each location
-        for (const spot of windowSpots) {
+        for (const spot of spotsToUse) {
             const freqMHz = spot.frequency / 1000000;
             if (!isFrequencySelected(freqMHz)) continue;
             
@@ -1342,6 +1394,41 @@ function renderArcs() {
         });
     }
 
+    // Apply max lines to display limit (randomly sample if needed)
+    const maxLinesToDisplay = maxLinesToDisplayEl.value;
+    if (maxLinesToDisplay !== 'all' && arcs.length > parseInt(maxLinesToDisplay)) {
+        // Randomly shuffle and take first N
+        for (let i = arcs.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arcs[i], arcs[j]] = [arcs[j], arcs[i]];
+        }
+        arcs.splice(parseInt(maxLinesToDisplay));
+        
+        // Also filter txLocations and rxLocations to only include those in sampled arcs
+        const sampledTxLocs = new Set();
+        const sampledRxLocs = new Set();
+        arcs.forEach(arc => {
+            sampledTxLocs.add(arc.spot.tx_loc);
+            sampledRxLocs.add(arc.spot.rx_loc);
+        });
+        
+        // Filter location maps
+        const filteredTxLocations = new Map();
+        const filteredRxLocations = new Map();
+        txLocations.forEach((loc, key) => {
+            if (sampledTxLocs.has(key)) filteredTxLocations.set(key, loc);
+        });
+        rxLocations.forEach((loc, key) => {
+            if (sampledRxLocs.has(key)) filteredRxLocations.set(key, loc);
+        });
+        
+        // Update references
+        txLocations.clear();
+        rxLocations.clear();
+        filteredTxLocations.forEach((v, k) => txLocations.set(k, v));
+        filteredRxLocations.forEach((v, k) => rxLocations.set(k, v));
+    }
+
     // Update animation settings
     if (useAnimation) {
         globe.arcDashLength(0.05).arcDashGap(0.03).arcDashAnimateTime(4000);
@@ -1402,8 +1489,24 @@ function renderArcs() {
     if (showHeatmap) {
         const locationCounts = new Map();
         
+        // If max lines to display is set, only use spots from sampled arcs
+        const maxLinesToDisplay = maxLinesToDisplayEl.value;
+        let spotsToUse = currentSpots;
+        if (maxLinesToDisplay !== 'all' && arcs.length > 0) {
+            // Use only spots that match the sampled arcs
+            const sampledPaths = new Set();
+            arcs.forEach(arc => {
+                const locs = [arc.spot.tx_loc, arc.spot.rx_loc].sort();
+                sampledPaths.add(`${locs[0]}-${locs[1]}`);
+            });
+            spotsToUse = currentSpots.filter(spot => {
+                const locs = [spot.tx_loc, spot.rx_loc].sort();
+                return sampledPaths.has(`${locs[0]}-${locs[1]}`);
+            });
+        }
+        
         // Count spots at each location - use coarser grid (1 degree) for performance
-        for (const spot of currentSpots) {
+        for (const spot of spotsToUse) {
             const freqMHz = spot.frequency / 1000000;
             if (!isFrequencySelected(freqMHz)) continue;
             
@@ -1593,6 +1696,17 @@ heatmapModeEl.addEventListener('change', () => {
         renderTimelapseWindow();
     } else {
         rerenderArcs();
+    }
+});
+
+// Auto-update display when Max Lines to Display changes
+maxLinesToDisplayEl.addEventListener('change', () => {
+    if (currentSpots && currentSpots.length > 0) {
+        if (timelapseModeEl.checked) {
+            renderTimelapseWindow();
+        } else {
+            rerenderData();
+        }
     }
 });
 
