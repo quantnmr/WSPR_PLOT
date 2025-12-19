@@ -7,10 +7,12 @@
   <ellipse cx="50" cy="50" rx="45" ry="30" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
   
   <!-- Longitude lines -->
-  <path d="M 50 5 Q 20 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
+  <path d="M 50 5 Q 15 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
+  <path d="M 50 5 Q 25 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
   <path d="M 50 5 Q 35 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
   <path d="M 50 5 Q 65 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
-  <path d="M 50 5 Q 80 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
+  <path d="M 50 5 Q 75 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
+  <path d="M 50 5 Q 85 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
   
   <!-- Simple arc representing WSPR path -->
   <path d="M 20 40 Q 50 20 80 40" fill="none" stroke="#1a1a2e" stroke-width="2" opacity="0.8"/>
@@ -20,9 +22,9 @@
   <circle cx="80" cy="40" r="2" fill="#1a1a2e"/>
   
   <!-- WSPR text around bottom curve -->
-  <text x="28" y="75" fill="#00cc00" font-size="16" font-weight="bold" font-family="Arial, sans-serif">W</text>
-  <text x="38" y="77" fill="#00cc00" font-size="16" font-weight="bold" font-family="Arial, sans-serif">S</text>
-  <text x="48" y="79" fill="#00cc00" font-size="16" font-weight="bold" font-family="Arial, sans-serif">P</text>
-  <text x="58" y="77" fill="#00cc00" font-size="16" font-weight="bold" font-family="Arial, sans-serif">R</text>
+  <text x="28" y="75" fill="#009900" font-size="16" font-weight="bold" font-family="Arial, sans-serif">W</text>
+  <text x="38" y="77" fill="#009900" font-size="16" font-weight="bold" font-family="Arial, sans-serif">S</text>
+  <text x="48" y="79" fill="#009900" font-size="16" font-weight="bold" font-family="Arial, sans-serif">P</text>
+  <text x="58" y="77" fill="#009900" font-size="16" font-weight="bold" font-family="Arial, sans-serif">R</text>
 </svg>
 
