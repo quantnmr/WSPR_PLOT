@@ -194,6 +194,58 @@
                 </label>
             </div>
 
+            <div class="form-group checkbox-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="timelapseMode">
+                    <span>Time-lapse animation</span>
+                </label>
+            </div>
+
+        </div>
+
+        <!-- Time-lapse Controls -->
+        <div id="timelapseControls" class="timelapse-controls" style="display: none;">
+            <div class="form-group">
+                <label for="timelapseWindow">Window Size</label>
+                <select id="timelapseWindow">
+                    <option value="2">2 Minutes</option>
+                    <option value="5">5 Minutes</option>
+                    <option value="10" selected>10 Minutes</option>
+                    <option value="15">15 Minutes</option>
+                    <option value="30">30 Minutes</option>
+                    <option value="60">1 Hour</option>
+                </select>
+                <div class="help-text">Time window shown in each frame</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="timelapseSpeed">Animation Speed</label>
+                <select id="timelapseSpeed">
+                    <option value="1">1x (Real-time)</option>
+                    <option value="10">10x</option>
+                    <option value="50">50x</option>
+                    <option value="100">100x</option>
+                    <option value="500">500x</option>
+                    <option value="1000">1,000x</option>
+                    <option value="2000" selected>2,000x (Fast)</option>
+                    <option value="5000">5,000x (Very Fast)</option>
+                    <option value="10000">10,000x (Ultra Fast)</option>
+                </select>
+            </div>
+            
+            <div class="timelapse-buttons">
+                <button class="btn btn-secondary" id="timelapsePlayPause">▶ Play</button>
+                <button class="btn btn-secondary" id="timelapseReset">⟲ Reset</button>
+            </div>
+            
+            <div class="timelapse-time">
+                <div class="timelapse-time-label">Time:</div>
+                <div class="timelapse-time-value" id="timelapseTimeDisplay">--:--</div>
+            </div>
+            
+            <div class="timelapse-progress">
+                <input type="range" id="timelapseProgress" min="0" max="100" value="0" class="timelapse-slider">
+            </div>
         </div>
 
         <button class="btn btn-primary" id="loadBtn">Load WSPR Spots</button>
@@ -259,6 +311,13 @@
         </div>
     </div>
 
+    <!-- Header -->
+    <header class="site-header">
+        <div class="header-content">
+            <div class="time-window-display" id="timeWindowDisplay"></div>
+        </div>
+    </header>
+
     <!-- Globe Container -->
     <div id="globeContainer">
         <div class="globe-info">Drag to rotate • Scroll to zoom • Click arc for details</div>
@@ -273,11 +332,7 @@
     <!-- Footer -->
     <footer class="site-footer">
         <div class="footer-content">
-            <p>Copyright © <span id="copyrightYear">2025</span> Scott Anthony Robson</p>
-            <p class="footer-license">
-                Licensed under <a href="LICENSE" target="_blank">MIT License</a> - 
-                Attribution required for use and modifications
-            </p>
+            <p>Copyright © <span id="copyrightYear">2025</span> Scott Anthony Robson - Licensed under <a href="LICENSE" target="_blank">MIT License</a> - Attribution required for use and modifications</p>
         </div>
     </footer>
 

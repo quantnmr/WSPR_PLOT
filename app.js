@@ -5,9 +5,33 @@ const sidebar = document.getElementById('sidebar');
 const sidebarToggle = document.getElementById('sidebarToggle');
 const sidebarClose = document.getElementById('sidebarClose');
 
+// Update header and footer position based on sidebar state
+function updateHeaderFooterPosition() {
+    const header = document.querySelector('.site-header');
+    const footer = document.querySelector('.site-footer');
+    if (!header || !footer) return;
+    
+    const isCollapsed = sidebar.classList.contains('collapsed');
+    const isAccordionOpen = sidebar.classList.contains('accordion-open');
+    
+    if (isCollapsed) {
+        header.style.left = '0';
+        footer.style.left = '0';
+    } else {
+        // Sidebar is 280px normally, 560px when accordion is open
+        const sidebarWidth = isAccordionOpen ? '560px' : '280px';
+        header.style.left = sidebarWidth;
+        footer.style.left = sidebarWidth;
+    }
+}
+
 function toggleSidebar() {
     sidebar.classList.toggle('collapsed');
     sidebarToggle.classList.toggle('visible', sidebar.classList.contains('collapsed'));
+    
+    // Update header and footer position
+    updateHeaderFooterPosition();
+    
     // Trigger resize after animation
     setTimeout(() => {
         window.dispatchEvent(new Event('resize'));
@@ -23,6 +47,8 @@ function checkMobile() {
         sidebar.classList.add('collapsed');
         sidebarToggle.classList.add('visible');
     }
+    // Update header and footer position
+    updateHeaderFooterPosition();
 }
 checkMobile();
 
@@ -57,6 +83,8 @@ function initAccordion() {
                 sidebarEl.classList.remove('accordion-open');
             }
         }
+        // Update header and footer position when accordion toggles
+        updateHeaderFooterPosition();
         // Trigger resize after animation
         setTimeout(() => {
             window.dispatchEvent(new Event('resize'));
@@ -117,8 +145,14 @@ function showSpotDetails(spot) {
     const rxLoc = gridToLatLng(spot.rx_loc);
     const distance = txLoc && rxLoc ? calculateDistance(txLoc.lat, txLoc.lng, rxLoc.lat, rxLoc.lng) : 'N/A';
     
-    const time = new Date(spot.time);
-    const timeStr = time.toISOString().slice(0, 19).replace('T', ' ') + ' UTC';
+    // Parse time as UTC (database returns UTC timestamps)
+    let timeStr = spot.time;
+    if (typeof timeStr === 'string' && !timeStr.includes('Z') && !timeStr.includes('+') && !timeStr.includes('-', 10)) {
+        // Format like "2025-01-15 12:00:00" - append Z to indicate UTC
+        timeStr = timeStr.replace(' ', 'T') + 'Z';
+    }
+    const time = new Date(timeStr);
+    const timeStrDisplay = time.toISOString().slice(0, 19).replace('T', ' ') + ' UTC';
     
     popupContent.innerHTML = `
         <h3>Spot Details</h3>
@@ -160,7 +194,7 @@ function showSpotDetails(spot) {
         </div>
         <div class="detail-row">
             <span class="detail-label">Time</span>
-            <span class="detail-value">${timeStr}</span>
+            <span class="detail-value">${timeStrDisplay}</span>
         </div>
     `;
     
@@ -287,11 +321,31 @@ const animateLinesEl = document.getElementById('animateLines');
 const solidLinesEl = document.getElementById('solidLines');
 const showMarkersEl = document.getElementById('showMarkers');
 const heatmapModeEl = document.getElementById('heatmapMode');
+const timeWindowDisplayEl = document.getElementById('timeWindowDisplay');
 
 const beaconModeEl = document.getElementById('beaconMode');
 const arcOptionsEl = document.getElementById('arcOptions');
 const frequencyLegendEl = document.getElementById('frequencyLegend');
 const beaconLegendEl = document.getElementById('beaconLegend');
+
+// Time-lapse elements
+const timelapseModeEl = document.getElementById('timelapseMode');
+const timelapseControlsEl = document.getElementById('timelapseControls');
+const timelapsePlayPauseEl = document.getElementById('timelapsePlayPause');
+const timelapseResetEl = document.getElementById('timelapseReset');
+const timelapseSpeedEl = document.getElementById('timelapseSpeed');
+const timelapseWindowEl = document.getElementById('timelapseWindow');
+const timelapseTimeDisplayEl = document.getElementById('timelapseTimeDisplay');
+const timelapseProgressEl = document.getElementById('timelapseProgress');
+
+// Time-lapse state
+let timelapseAnimation = null;
+let timelapseIsPlaying = false;
+let timelapseStartTime = null;
+let timelapseDataMinTime = null;
+let timelapseDataMaxTime = null;
+let timelapseCurrentWindowStart = null;
+let timelapseAllSpots = [];
 
 // Band filter elements
 const bandCheckboxes = document.querySelectorAll('.band-checkbox input[type="checkbox"]');
@@ -392,6 +446,12 @@ function toggleBeaconMode() {
     frequencyLegendEl.style.display = isBeacon ? 'none' : 'block';
     beaconLegendEl.style.display = isBeacon ? 'block' : 'none';
     
+    // Disable time-lapse if beacon mode is enabled
+    if (isBeacon && timelapseModeEl.checked) {
+        timelapseModeEl.checked = false;
+        toggleTimelapseMode();
+    }
+    
     // Re-render if we have data
     if (currentSpots) {
         rerenderData();
@@ -399,6 +459,338 @@ function toggleBeaconMode() {
 }
 
 beaconModeEl.addEventListener('change', toggleBeaconMode);
+
+// Time-lapse functionality
+function toggleTimelapseMode() {
+    const isTimelapse = timelapseModeEl.checked;
+    timelapseControlsEl.style.display = isTimelapse ? 'block' : 'none';
+    
+    // Disable beacon mode if time-lapse is enabled
+    if (isTimelapse && beaconModeEl.checked) {
+        beaconModeEl.checked = false;
+        toggleBeaconMode();
+    }
+    
+    if (isTimelapse) {
+        // Initialize time-lapse if we have data
+        if (currentSpots && currentSpots.length > 0) {
+            initializeTimelapse();
+        }
+    } else {
+        // Stop animation and show all arcs
+        stopTimelapse();
+        if (currentSpots) {
+            rerenderData();
+        }
+    }
+    
+    // Trigger resize after showing/hiding controls
+    setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+    }, 100);
+}
+
+function initializeTimelapse() {
+    if (!currentSpots || currentSpots.length === 0) return;
+    
+    // Store all spots with their timestamps
+    // Ensure we parse UTC timestamps correctly (database returns UTC)
+    timelapseAllSpots = currentSpots.map(spot => {
+        // If time string doesn't have timezone, assume it's UTC
+        let timeStr = spot.time;
+        if (typeof timeStr === 'string' && !timeStr.includes('Z') && !timeStr.includes('+') && !timeStr.includes('-', 10)) {
+            // Format like "2025-01-15 12:00:00" - append Z to indicate UTC
+            timeStr = timeStr.replace(' ', 'T') + 'Z';
+        }
+        return {
+            ...spot,
+            timeMs: new Date(timeStr).getTime()
+        };
+    });
+    
+    // Find time range of all data
+    const times = timelapseAllSpots.map(s => s.timeMs);
+    timelapseDataMinTime = Math.min(...times);
+    timelapseDataMaxTime = Math.max(...times);
+    
+    // Reset to start
+    timelapseCurrentWindowStart = timelapseDataMinTime;
+    timelapseProgressEl.value = 0;
+    updateTimelapseDisplay();
+    renderTimelapseWindow();
+}
+
+function renderTimelapseWindow() {
+    if (!timelapseModeEl.checked || timelapseAllSpots.length === 0) return;
+    if (!timelapseCurrentWindowStart || !timelapseDataMinTime || !timelapseDataMaxTime) return;
+    
+    const windowSizeMinutes = parseInt(timelapseWindowEl.value) || 10;
+    const windowSizeMs = windowSizeMinutes * 60 * 1000;
+    const windowEnd = timelapseCurrentWindowStart + windowSizeMs;
+    
+    // Filter spots within current window
+    const windowSpots = timelapseAllSpots.filter(spot => 
+        spot.timeMs >= timelapseCurrentWindowStart && spot.timeMs < windowEnd
+    );
+    
+    // Build arcs from spots in this window (same logic as renderArcs)
+    const arcs = [];
+    const seen = new Set();
+    const txLocations = new Map();
+    const rxLocations = new Map();
+    
+    for (const spot of windowSpots) {
+        const freqMHz = spot.frequency / 1000000;
+        if (!isFrequencySelected(freqMHz)) continue;
+        
+        const txLoc = gridToLatLng(spot.tx_loc);
+        const rxLoc = gridToLatLng(spot.rx_loc);
+        if (!txLoc || !rxLoc) continue;
+        if (spot.tx_loc === spot.rx_loc) continue;
+        
+        // Deduplicate by path (bidirectional)
+        const locs = [spot.tx_loc, spot.rx_loc].sort();
+        const pathKey = `${locs[0]}-${locs[1]}`;
+        if (seen.has(pathKey)) continue;
+        seen.add(pathKey);
+        
+        let color = getBandColor(freqMHz);
+        if (!solidLinesEl.checked) {
+            color = hexToRgba(color, 0.4);
+        }
+        
+        // Track TX location
+        if (!txLocations.has(spot.tx_loc)) {
+            txLocations.set(spot.tx_loc, {
+                lat: txLoc.lat,
+                lng: txLoc.lng,
+                color: getBandColor(freqMHz),
+                spot: spot
+            });
+        }
+        
+        // Track RX location
+        if (!rxLocations.has(spot.rx_loc)) {
+            rxLocations.set(spot.rx_loc, {
+                lat: rxLoc.lat,
+                lng: rxLoc.lng,
+                spot: spot
+            });
+        }
+        
+        arcs.push({
+            startLat: txLoc.lat,
+            startLng: txLoc.lng,
+            endLat: rxLoc.lat,
+            endLng: rxLoc.lng,
+            color: color,
+            spot: spot
+        });
+    }
+    
+    // Update animation settings - disable path animation during time-lapse
+    // (it looks jerky when time windows change quickly)
+    globe.arcDashLength(1).arcDashGap(0).arcDashAnimateTime(0);
+    
+    globe.arcStroke(0.3);
+    globe.arcAltitudeAutoScale(0.3);
+    
+    // Show markers if enabled
+    let allPoints = [];
+    if (showMarkersEl.checked) {
+        txLocations.forEach(loc => {
+            allPoints.push({
+                lat: loc.lat,
+                lng: loc.lng,
+                color: loc.color,
+                size: 0.18,
+                type: 'tx',
+                spot: loc.spot,
+                label: loc.spot ? loc.spot.tx_sign : ''
+            });
+        });
+        
+        rxLocations.forEach((loc, key) => {
+            if (!txLocations.has(key)) {
+                allPoints.push({
+                    lat: loc.lat,
+                    lng: loc.lng,
+                    color: 'rgba(255, 255, 255, 0.6)',
+                    size: 0.12,
+                    type: 'rx',
+                    spot: loc.spot,
+                    label: loc.spot ? loc.spot.rx_sign : ''
+                });
+            }
+        });
+    }
+    
+    globe.pointRadius(d => d.size);
+    globe.pointColor(d => d.color);
+    globe.pointAltitude(0.005);
+    globe.labelsData([]);
+    globe.ringsData([]);
+    globe.pointsData(showMarkersEl.checked ? allPoints : []);
+    globe.arcsData(arcs);
+    globe.heatmapsData([]);
+    
+    // Update time window display - use spots in current window
+    updateTimeWindowDisplay(windowSpots);
+}
+
+function updateTimelapseDisplay() {
+    if (!timelapseCurrentWindowStart || !timelapseDataMinTime || !timelapseDataMaxTime) {
+        timelapseTimeDisplayEl.textContent = '--:--';
+        return;
+    }
+    
+    const windowSizeMinutes = parseInt(timelapseWindowEl.value) || 10;
+    const windowSizeMs = windowSizeMinutes * 60 * 1000;
+    const windowEnd = timelapseCurrentWindowStart + windowSizeMs;
+    
+    const startDate = new Date(timelapseCurrentWindowStart);
+    const endDate = new Date(windowEnd);
+    const startStr = startDate.toISOString().slice(0, 16).replace('T', ' ');
+    const endStr = endDate.toISOString().slice(0, 16).replace('T', ' ');
+    timelapseTimeDisplayEl.textContent = `${startStr} - ${endStr} UTC`;
+    
+    // Update progress slider only if not being dragged
+    if (!isDraggingProgress) {
+        const totalRange = timelapseDataMaxTime - timelapseDataMinTime;
+        const progress = ((timelapseCurrentWindowStart - timelapseDataMinTime) / totalRange) * 100;
+        timelapseProgressEl.value = Math.min(100, Math.max(0, progress));
+    }
+}
+
+function playTimelapse() {
+    if (timelapseIsPlaying || !timelapseModeEl.checked) return;
+    if (!timelapseAllSpots.length || !timelapseDataMinTime || !timelapseDataMaxTime) return;
+    
+    timelapseIsPlaying = true;
+    timelapseStartTime = Date.now();
+    const startWindowStart = timelapseCurrentWindowStart;
+    const windowSizeMinutes = parseInt(timelapseWindowEl.value) || 10;
+    const windowSizeMs = windowSizeMinutes * 60 * 1000;
+    
+    timelapsePlayPauseEl.textContent = '⏸ Pause';
+    
+    function animate() {
+        if (!timelapseIsPlaying) return;
+        
+        const speed = parseFloat(timelapseSpeedEl.value);
+        const elapsed = (Date.now() - timelapseStartTime) * speed;
+        // Move window forward: each millisecond of animation time = 1ms of real time
+        const newWindowStart = startWindowStart + elapsed;
+        
+        // Calculate max window start (when window would extend past data)
+        const maxWindowStart = timelapseDataMaxTime - windowSizeMs;
+        
+        if (newWindowStart >= maxWindowStart) {
+            // Reached end
+            timelapseCurrentWindowStart = maxWindowStart;
+            stopTimelapse();
+            updateTimelapseDisplay();
+            renderTimelapseWindow();
+        } else {
+            timelapseCurrentWindowStart = newWindowStart;
+            updateTimelapseDisplay();
+            renderTimelapseWindow();
+            timelapseAnimation = requestAnimationFrame(animate);
+        }
+    }
+    
+    timelapseAnimation = requestAnimationFrame(animate);
+}
+
+function pauseTimelapse() {
+    timelapseIsPlaying = false;
+    if (timelapseAnimation) {
+        cancelAnimationFrame(timelapseAnimation);
+        timelapseAnimation = null;
+    }
+    timelapsePlayPauseEl.textContent = '▶ Play';
+}
+
+function stopTimelapse() {
+    pauseTimelapse();
+}
+
+function resetTimelapse() {
+    stopTimelapse();
+    if (timelapseDataMinTime) {
+        timelapseCurrentWindowStart = timelapseDataMinTime;
+        updateTimelapseDisplay();
+        renderTimelapseWindow();
+    }
+}
+
+// Event listeners for time-lapse
+timelapseModeEl.addEventListener('change', toggleTimelapseMode);
+timelapsePlayPauseEl.addEventListener('click', () => {
+    if (timelapseIsPlaying) {
+        pauseTimelapse();
+    } else {
+        playTimelapse();
+    }
+});
+timelapseResetEl.addEventListener('click', resetTimelapse);
+timelapseSpeedEl.addEventListener('change', () => {
+    // Restart animation with new speed if playing
+    if (timelapseIsPlaying) {
+        pauseTimelapse();
+        playTimelapse();
+    }
+});
+
+timelapseWindowEl.addEventListener('change', () => {
+    // Reinitialize if we have data
+    if (timelapseModeEl.checked && currentSpots && currentSpots.length > 0) {
+        initializeTimelapse();
+    }
+});
+
+let wasPlayingBeforeDrag = false;
+let isDraggingProgress = false;
+
+timelapseProgressEl.addEventListener('mousedown', () => {
+    wasPlayingBeforeDrag = timelapseIsPlaying;
+    isDraggingProgress = true;
+    if (timelapseIsPlaying) pauseTimelapse();
+});
+
+timelapseProgressEl.addEventListener('input', (e) => {
+    if (!timelapseDataMinTime || !timelapseDataMaxTime) return;
+    
+    const windowSizeMinutes = parseInt(timelapseWindowEl.value) || 10;
+    const windowSizeMs = windowSizeMinutes * 60 * 1000;
+    const totalRange = timelapseDataMaxTime - timelapseDataMinTime;
+    const maxWindowStart = timelapseDataMaxTime - windowSizeMs;
+    
+    const progress = parseFloat(e.target.value) / 100;
+    timelapseCurrentWindowStart = timelapseDataMinTime + (maxWindowStart - timelapseDataMinTime) * progress;
+    
+    // Don't update display during drag to avoid slider jumping
+    if (!isDraggingProgress) {
+        updateTimelapseDisplay();
+    } else {
+        // Just update time display, not slider
+        const windowEnd = timelapseCurrentWindowStart + windowSizeMs;
+        const startDate = new Date(timelapseCurrentWindowStart);
+        const endDate = new Date(windowEnd);
+        const startStr = startDate.toISOString().slice(0, 16).replace('T', ' ');
+        const endStr = endDate.toISOString().slice(0, 16).replace('T', ' ');
+        timelapseTimeDisplayEl.textContent = `${startStr} - ${endStr} UTC`;
+    }
+    renderTimelapseWindow();
+});
+
+timelapseProgressEl.addEventListener('mouseup', () => {
+    isDraggingProgress = false;
+    if (wasPlayingBeforeDrag) {
+        setTimeout(() => playTimelapse(), 100);
+    }
+    wasPlayingBeforeDrag = false;
+});
 
 // Band colors by frequency (MHz)
 const bandColors = {
@@ -556,6 +948,8 @@ const globe = Globe()(container)
 function resize() {
     globe.width(container.clientWidth);
     globe.height(container.clientHeight);
+    // Update header/footer position on resize
+    checkMobile();
 }
 window.addEventListener('resize', resize);
 resize();
@@ -564,6 +958,44 @@ resize();
 function setStatus(message, type = '') {
     statusEl.textContent = message;
     statusEl.className = 'status ' + type;
+}
+
+// Update time window display on globe
+function updateTimeWindowDisplay(spots) {
+    if (!timeWindowDisplayEl) {
+        console.error('timeWindowDisplayEl not found!');
+        return;
+    }
+    
+    if (!spots || spots.length === 0) {
+        timeWindowDisplayEl.classList.remove('visible');
+        return;
+    }
+    
+    // Get time range from spots
+    const times = spots.map(spot => {
+        let timeStr = spot.time;
+        if (typeof timeStr === 'string' && !timeStr.includes('Z') && !timeStr.includes('+') && !timeStr.includes('-', 10)) {
+            timeStr = timeStr.replace(' ', 'T') + 'Z';
+        }
+        return new Date(timeStr).getTime();
+    }).filter(t => !isNaN(t));
+    
+    if (times.length === 0) {
+        timeWindowDisplayEl.classList.remove('visible');
+        return;
+    }
+    
+    const minTime = Math.min(...times);
+    const maxTime = Math.max(...times);
+    
+    const startDate = new Date(minTime);
+    const endDate = new Date(maxTime);
+    const startStr = startDate.toISOString().slice(0, 16).replace('T', ' ');
+    const endStr = endDate.toISOString().slice(0, 16).replace('T', ' ');
+    
+    timeWindowDisplayEl.textContent = `${startStr} - ${endStr} UTC`;
+    timeWindowDisplayEl.classList.add('visible');
 }
 
 // Load WSPR data
@@ -623,6 +1055,7 @@ async function loadWSPRData() {
             setStatus('No spots found', 'error');
             globe.arcsData([]);
             currentSpots = null;
+            timeWindowDisplayEl.classList.remove('visible');
             loadBtn.disabled = false;
             return;
         }
@@ -632,6 +1065,11 @@ async function loadWSPRData() {
 
         // Render the data
         rerenderData();
+        
+        // Initialize time-lapse if enabled
+        if (timelapseModeEl.checked && !beaconModeEl.checked) {
+            initializeTimelapse();
+        }
         
         // Update status
         const isBeaconMode = beaconModeEl.checked;
@@ -662,6 +1100,15 @@ function rerenderData() {
     if (!currentSpots || currentSpots.length === 0) return;
     
     const isBeaconMode = beaconModeEl.checked;
+    const isTimelapse = timelapseModeEl.checked;
+    
+    // Time-lapse mode overrides normal rendering
+    if (isTimelapse && !isBeaconMode) {
+        initializeTimelapse();
+        const windowSize = parseInt(timelapseWindowEl.value) || 10;
+        setStatus(`Time-lapse ready: ${currentSpots.length} spots, ${windowSize}-minute windows`, 'success');
+        return;
+    }
     
     if (isBeaconMode) {
         renderBeaconPoints();
@@ -844,6 +1291,17 @@ function renderArcs() {
     globe.pointsData(showHeatmap ? [] : allPoints);  // Hide points in heatmap mode
     globe.arcsData(showHeatmap ? [] : arcs);  // Hide arcs in heatmap mode
     globe.heatmapsData(showHeatmap ? [heatmapData] : []);
+    
+    // Update time window display - use filtered spots for accurate time range
+    if (currentSpots && currentSpots.length > 0) {
+        const filteredSpots = showHeatmap ? currentSpots : currentSpots.filter(spot => {
+            const freqMHz = spot.frequency / 1000000;
+            return isFrequencySelected(freqMHz);
+        });
+        updateTimeWindowDisplay(filteredSpots);
+    } else {
+        updateTimeWindowDisplay([]);
+    }
 }
 
 // Render beacon points (beacon mode)
@@ -947,6 +1405,9 @@ function renderBeaconPoints() {
     globe.arcsData(pathArcs);
     globe.pointsData(points);
     globe.labelsData(labels);
+    
+    // Update time window display for beacon mode
+    updateTimeWindowDisplay(sortedSpots);
 }
 
 // Alias for backward compatibility
@@ -956,8 +1417,26 @@ function rerenderArcs() {
 
 // Event listeners
 loadBtn.addEventListener('click', loadWSPRData);
-animateLinesEl.addEventListener('change', rerenderArcs);
-solidLinesEl.addEventListener('change', rerenderArcs);
-showMarkersEl.addEventListener('change', rerenderArcs);
+animateLinesEl.addEventListener('change', () => {
+    if (timelapseModeEl.checked) {
+        renderTimelapseWindow();
+    } else {
+        rerenderArcs();
+    }
+});
+solidLinesEl.addEventListener('change', () => {
+    if (timelapseModeEl.checked) {
+        renderTimelapseWindow();
+    } else {
+        rerenderArcs();
+    }
+});
+showMarkersEl.addEventListener('change', () => {
+    if (timelapseModeEl.checked) {
+        renderTimelapseWindow();
+    } else {
+        rerenderArcs();
+    }
+});
 heatmapModeEl.addEventListener('change', rerenderArcs);
 
