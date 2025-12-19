@@ -34,6 +34,8 @@ body {
     cursor: pointer;
     display: none;  /* Hidden when sidebar is open */
     opacity: 0.9;
+    pointer-events: auto;
+    touch-action: manipulation; /* Better touch handling on mobile */
 }
 
 .sidebar-toggle:hover {
@@ -826,6 +828,11 @@ body {
         height: 45px;
     }
     
+    /* Ensure header doesn't block button clicks on mobile when sidebar is collapsed */
+    body.sidebar-collapsed .site-header {
+        left: 70px !important;
+    }
+    
     .site-footer {
         padding: 6px 10px;
         font-size: 0.7em;
@@ -835,6 +842,12 @@ body {
     #globeContainer {
         padding-top: 45px;
         padding-bottom: 45px;
+    }
+    
+    /* Ensure hamburger button is always on top and clickable on mobile */
+    .sidebar-toggle {
+        z-index: 3000 !important;
+        pointer-events: auto !important;
     }
 }
 

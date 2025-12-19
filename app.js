@@ -16,7 +16,9 @@ function updateHeaderFooterPosition() {
     
     if (isCollapsed) {
         // When collapsed, leave space for hamburger button (60px = 10px margin + 40px button + 10px margin)
-        header.style.left = '60px';
+        // Use a larger offset on mobile to ensure button is never covered
+        const isMobile = window.innerWidth <= 768;
+        header.style.left = isMobile ? '70px' : '60px';
         footer.style.left = '0';
     } else {
         // Sidebar is 280px normally, 560px when accordion is open
@@ -29,6 +31,13 @@ function updateHeaderFooterPosition() {
 function toggleSidebar() {
     sidebar.classList.toggle('collapsed');
     sidebarToggle.classList.toggle('visible', sidebar.classList.contains('collapsed'));
+    
+    // Add/remove body class for CSS targeting on mobile
+    if (sidebar.classList.contains('collapsed')) {
+        document.body.classList.add('sidebar-collapsed');
+    } else {
+        document.body.classList.remove('sidebar-collapsed');
+    }
     
     // Update header and footer position
     updateHeaderFooterPosition();
@@ -47,6 +56,7 @@ function checkMobile() {
     if (window.innerWidth <= 768) {
         sidebar.classList.add('collapsed');
         sidebarToggle.classList.add('visible');
+        document.body.classList.add('sidebar-collapsed');
     }
     // Update header and footer position
     updateHeaderFooterPosition();
