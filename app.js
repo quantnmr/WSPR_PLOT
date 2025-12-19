@@ -15,7 +15,8 @@ function updateHeaderFooterPosition() {
     const isAccordionOpen = sidebar.classList.contains('accordion-open');
     
     if (isCollapsed) {
-        header.style.left = '0';
+        // When collapsed, leave space for hamburger button (60px = 10px margin + 40px button + 10px margin)
+        header.style.left = '60px';
         footer.style.left = '0';
     } else {
         // Sidebar is 280px normally, 560px when accordion is open
