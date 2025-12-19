@@ -347,6 +347,164 @@ const timeWindowDisplayEl = document.getElementById('timeWindowDisplay');
 
 const beaconModeEl = document.getElementById('beaconMode');
 const arcOptionsEl = document.getElementById('arcOptions');
+
+// URL Parameter handling for sharing links
+function parseURLParameters() {
+    const params = new URLSearchParams(window.location.search);
+    const urlParams = {};
+    
+    // Parse all parameters
+    for (const [key, value] of params.entries()) {
+        urlParams[key] = value;
+    }
+    
+    return urlParams;
+}
+
+function applyURLParameters() {
+    const params = parseURLParameters();
+    if (Object.keys(params).length === 0) return false; // No URL parameters
+    
+    let hasParams = false;
+    
+    // Set call signs
+    if (params.rx) {
+        rxCallsignEl.value = params.rx.toUpperCase();
+        hasParams = true;
+    }
+    if (params.tx) {
+        txCallsignEl.value = params.tx.toUpperCase();
+        hasParams = true;
+    }
+    
+    // Set time window
+    if (params.window) {
+        timeWindowEl.value = params.window;
+        hasParams = true;
+    }
+    
+    // Set time offsets
+    if (params.days) {
+        daysAgoEl.value = params.days;
+        hasParams = true;
+    }
+    if (params.hours) {
+        hoursAgoEl.value = params.hours;
+        hasParams = true;
+    }
+    
+    // Set max spots to download (validate against allowed values)
+    if (params.maxSpots) {
+        const validValues = ['100', '500', '1000', '5000', '10000', '25000', '50000', '100000'];
+        if (validValues.includes(params.maxSpots)) {
+            maxLinesEl.value = params.maxSpots;
+            hasParams = true;
+        } else {
+            console.warn(`Invalid maxSpots value: ${params.maxSpots}. Valid values are: ${validValues.join(', ')}`);
+        }
+    }
+    
+    // Set max lines to display (validate against allowed values)
+    if (params.maxLines) {
+        const validValues = ['all', '200', '500', '1000', '2000', '5000'];
+        if (validValues.includes(params.maxLines)) {
+            maxLinesToDisplayEl.value = params.maxLines;
+            hasParams = true;
+        } else {
+            console.warn(`Invalid maxLines value: ${params.maxLines}. Valid values are: ${validValues.join(', ')}`);
+        }
+    }
+    
+    // Set frequency bands (comma-separated list)
+    if (params.bands) {
+        const selectedBands = params.bands.split(',');
+        const bandCheckboxes = document.querySelectorAll('input[data-band]');
+        bandCheckboxes.forEach(cb => {
+            const bandValue = cb.getAttribute('data-band');
+            cb.checked = selectedBands.includes(bandValue);
+        });
+        hasParams = true;
+    }
+    
+    // Set display options
+    if (params.animateLines !== undefined) {
+        animateLinesEl.checked = params.animateLines === 'true' || params.animateLines === '1';
+        hasParams = true;
+    }
+    if (params.solidLines !== undefined) {
+        solidLinesEl.checked = params.solidLines === 'true' || params.solidLines === '1';
+        hasParams = true;
+    }
+    if (params.showMarkers !== undefined) {
+        showMarkersEl.checked = params.showMarkers === 'true' || params.showMarkers === '1';
+        hasParams = true;
+    }
+    if (params.heatmap !== undefined) {
+        heatmapModeEl.checked = params.heatmap === 'true' || params.heatmap === '1';
+        hasParams = true;
+    }
+    if (params.beacon !== undefined) {
+        beaconModeEl.checked = params.beacon === 'true' || params.beacon === '1';
+        hasParams = true;
+    }
+    
+    // Set time-lapse options
+    if (params.timelapse !== undefined) {
+        timelapseModeEl.checked = params.timelapse === 'true' || params.timelapse === '1';
+        hasParams = true;
+    }
+    if (params.timelapseWindow) {
+        timelapseWindowEl.value = params.timelapseWindow;
+        hasParams = true;
+    }
+    if (params.timelapseSpeed) {
+        timelapseSpeedEl.value = params.timelapseSpeed;
+        hasParams = true;
+    }
+    
+    return hasParams;
+}
+
+function generateShareURL() {
+    const params = new URLSearchParams();
+    
+    // Add call signs if set
+    if (rxCallsignEl.value) params.set('rx', rxCallsignEl.value);
+    if (txCallsignEl.value) params.set('tx', txCallsignEl.value);
+    
+    // Add time settings
+    if (timeWindowEl.value !== '15') params.set('window', timeWindowEl.value);
+    if (daysAgoEl.value !== '0') params.set('days', daysAgoEl.value);
+    if (hoursAgoEl.value !== '0') params.set('hours', hoursAgoEl.value);
+    
+    // Add max spots and lines
+    if (maxLinesEl.value !== '1000') params.set('maxSpots', maxLinesEl.value);
+    if (maxLinesToDisplayEl.value !== 'all') params.set('maxLines', maxLinesToDisplayEl.value);
+    
+    // Add selected bands
+    const selectedBands = Array.from(document.querySelectorAll('input[data-band]:checked'))
+        .map(cb => cb.getAttribute('data-band'));
+    if (selectedBands.length > 0 && selectedBands.length < 12) {
+        params.set('bands', selectedBands.join(','));
+    }
+    
+    // Add display options (only if not default)
+    if (animateLinesEl.checked) params.set('animateLines', '1');
+    if (solidLinesEl.checked) params.set('solidLines', '1');
+    if (!showMarkersEl.checked) params.set('showMarkers', '0');
+    if (heatmapModeEl.checked) params.set('heatmap', '1');
+    if (beaconModeEl.checked) params.set('beacon', '1');
+    
+    // Add time-lapse options
+    if (timelapseModeEl.checked) {
+        params.set('timelapse', '1');
+        if (timelapseWindowEl.value !== '10') params.set('timelapseWindow', timelapseWindowEl.value);
+        if (timelapseSpeedEl.value !== '2000') params.set('timelapseSpeed', timelapseSpeedEl.value);
+    }
+    
+    return window.location.origin + window.location.pathname + '?' + params.toString();
+}
+
 const frequencyLegendEl = document.getElementById('frequencyLegend');
 const beaconLegendEl = document.getElementById('beaconLegend');
 
@@ -1709,4 +1867,29 @@ maxLinesToDisplayEl.addEventListener('change', () => {
         }
     }
 });
+
+// Apply URL parameters on page load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        const hasParams = applyURLParameters();
+        
+        // Auto-load if 'autoLoad' parameter is set or if any parameters are present
+        const params = parseURLParameters();
+        if (params.autoLoad === 'true' || params.autoLoad === '1' || (hasParams && params.autoLoad !== 'false')) {
+            // Small delay to ensure all fields are set
+            setTimeout(() => {
+                loadBtn.click();
+            }, 100);
+        }
+    });
+} else {
+    // DOM already loaded, apply immediately
+    const hasParams = applyURLParameters();
+    const params = parseURLParameters();
+    if (params.autoLoad === 'true' || params.autoLoad === '1' || (hasParams && params.autoLoad !== 'false')) {
+        setTimeout(() => {
+            loadBtn.click();
+        }, 100);
+    }
+}
 

@@ -59,7 +59,7 @@
                     <h3>Visualization Options</h3>
                     <ul>
                         <li><strong>Max Spots to Download:</strong> Limits how many spots are downloaded from the database (100 to 100,000 spots). This helps control data size and query performance.</li>
-                        <li><strong>Max Lines to Display:</strong> Limits the number of unique paths to display after deduplication. If you have more unique paths than the limit, a random sample will be selected. Options: All, 200, 500, 1,000, or 2,000 paths. This applies to both arc rendering and heatmap generation.</li>
+                        <li><strong>Max Lines to Display:</strong> Limits the number of unique paths to display after deduplication. If you have more unique paths than the limit, a random sample will be selected. Options: All, 200, 500, 1,000, 2,000, or 5,000 paths. This applies to both arc rendering and heatmap generation.</li>
                         <li><strong>Animate Lines:</strong> Adds a moving "dot dot dot" pattern along arcs. Automatically disabled during time-lapse animation.</li>
                         <li><strong>Solid Lines:</strong> Makes arcs fully opaque (default is semi-transparent).</li>
                         <li><strong>Show TX/RX Markers:</strong> Displays solid circles at transmitters and open circles at receivers.</li>
@@ -74,6 +74,38 @@
                     
                     <h3>Statistics Panel</h3>
                     <p>After loading spots, view statistics including total spots, unique paths, furthest contact distance, most active band, and SNR metrics.</p>
+                    
+                    <h3>Sharing Links with URL Parameters</h3>
+                    <p>You can share links that automatically populate fields and optionally auto-load spots. Add parameters to the URL like this:</p>
+                    <p><code>?tx=K6AUS&window=60&autoLoad=1</code></p>
+                    
+                    <h4>Available URL Parameters:</h4>
+                    <ul>
+                        <li><strong>rx</strong> - Receiver call sign (e.g., <code>?rx=K6AUS</code>)</li>
+                        <li><strong>tx</strong> - Transmitter call sign (e.g., <code>?tx=W1AW</code>)</li>
+                        <li><strong>window</strong> - Time window in minutes (e.g., <code>?window=60</code> for 1 hour)</li>
+                        <li><strong>days</strong> - Days ago offset (0-7, e.g., <code>?days=1</code>)</li>
+                        <li><strong>hours</strong> - Hours ago offset (0-23, e.g., <code>?hours=4</code>)</li>
+                        <li><strong>maxSpots</strong> - Max spots to download (e.g., <code>?maxSpots=5000</code>)</li>
+                        <li><strong>maxLines</strong> - Max lines to display: all, 200, 500, 1000, 2000, or 5000 (e.g., <code>?maxLines=500</code>)</li>
+                        <li><strong>bands</strong> - Comma-separated frequency bands (e.g., <code>?bands=14,21,28</code> for 14, 21, and 28 MHz)</li>
+                        <li><strong>animateLines</strong> - Animate lines: 1 or 0 (e.g., <code>?animateLines=1</code>)</li>
+                        <li><strong>solidLines</strong> - Solid lines (no transparency): 1 or 0</li>
+                        <li><strong>showMarkers</strong> - Show TX/RX markers: 1 or 0 (default is 1)</li>
+                        <li><strong>heatmap</strong> - Enable heatmap mode: 1 or 0</li>
+                        <li><strong>beacon</strong> - Enable beacon mode: 1 or 0</li>
+                        <li><strong>timelapse</strong> - Enable time-lapse animation: 1 or 0</li>
+                        <li><strong>timelapseWindow</strong> - Time-lapse window size in minutes (e.g., <code>?timelapseWindow=10</code>)</li>
+                        <li><strong>timelapseSpeed</strong> - Time-lapse speed multiplier (e.g., <code>?timelapseSpeed=2000</code>)</li>
+                        <li><strong>autoLoad</strong> - Automatically load spots on page load: 1 or 0 (e.g., <code>?autoLoad=1</code>)</li>
+                    </ul>
+                    
+                    <h4>Example URLs:</h4>
+                    <ul>
+                        <li><code>?tx=K6AUS&window=60&autoLoad=1</code> - Auto-loads with transmitter K6AUS and 1-hour window</li>
+                        <li><code>?rx=K6AUS&bands=14,21,28&heatmap=1&autoLoad=1</code> - Auto-loads with receiver K6AUS, specific bands, and heatmap mode</li>
+                        <li><code>?tx=W1AW&window=240&maxSpots=10000&maxLines=2000&autoLoad=1</code> - Auto-loads with custom limits</li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -177,6 +209,7 @@
                 <option value="500">500</option>
                 <option value="1000">1,000</option>
                 <option value="2000">2,000</option>
+                <option value="5000">5,000</option>
             </select>
             <div class="help-text">Randomly sample unique paths if limit is exceeded</div>
         </div>
