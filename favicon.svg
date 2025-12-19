@@ -30,7 +30,7 @@
   <circle cx="80" cy="40" r="2" fill="#1a1a2e"/>
   
   <!-- WSPR text around bottom curve -->
-  <text x="25" y="75" fill="#009900" font-size="16" font-weight="bold" font-family="Arial, sans-serif">W</text>
+  <text x="22" y="77" fill="#009900" font-size="16" font-weight="bold" font-family="Arial, sans-serif">W</text>
   <text x="38" y="77" fill="#009900" font-size="16" font-weight="bold" font-family="Arial, sans-serif">S</text>
   <text x="48" y="79" fill="#009900" font-size="16" font-weight="bold" font-family="Arial, sans-serif">P</text>
   <text x="58" y="77" fill="#009900" font-size="16" font-weight="bold" font-family="Arial, sans-serif">R</text>
