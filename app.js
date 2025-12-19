@@ -51,17 +51,27 @@ function toggleSidebar() {
 sidebarToggle.addEventListener('click', toggleSidebar);
 sidebarClose.addEventListener('click', toggleSidebar);
 
-// Auto-collapse sidebar on mobile
+// Auto-collapse sidebar on mobile (only on initial load, not on resize)
+let isInitialLoad = true;
 function checkMobile() {
     if (window.innerWidth <= 768) {
-        sidebar.classList.add('collapsed');
-        sidebarToggle.classList.add('visible');
-        document.body.classList.add('sidebar-collapsed');
+        // Only auto-collapse on initial load, not when user has manually opened it
+        if (isInitialLoad) {
+            sidebar.classList.add('collapsed');
+            sidebarToggle.classList.add('visible');
+            document.body.classList.add('sidebar-collapsed');
+        }
+    } else {
+        // On larger screens, ensure sidebar is open
+        sidebar.classList.remove('collapsed');
+        sidebarToggle.classList.remove('visible');
+        document.body.classList.remove('sidebar-collapsed');
     }
     // Update header and footer position
     updateHeaderFooterPosition();
 }
 checkMobile();
+isInitialLoad = false; // Mark initial load as complete after first check
 
 // Close sidebar on mobile after loading (so user can see results)
 function closeSidebarOnMobile() {
