@@ -6,20 +6,21 @@
   <ellipse cx="50" cy="50" rx="45" ry="15" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
   <ellipse cx="50" cy="50" rx="45" ry="30" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
   
-  <!-- Longitude lines -->
-  <path d="M 50 5 Q 0 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
+  <!-- Longitude lines (spaced evenly from -180 to 180 degrees) -->
+  <path d="M 50 5 Q 5 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
+  <path d="M 50 5 Q 8.5 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
   <path d="M 50 5 Q 12 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
+  <path d="M 50 5 Q 15.5 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
   <path d="M 50 5 Q 19 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
+  <path d="M 50 5 Q 22.5 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
   <path d="M 50 5 Q 26 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
-  <path d="M 50 5 Q 33 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
-  <path d="M 50 5 Q 40 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
-  <path d="M 50 5 Q 47 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
-  <path d="M 50 5 Q 54 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
-  <path d="M 50 5 Q 61 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
-  <path d="M 50 5 Q 68 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
-  <path d="M 50 5 Q 75 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
-  <path d="M 50 5 Q 82 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
-  <path d="M 50 5 Q 89 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
+  <path d="M 50 5 Q 50 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
+  <path d="M 50 5 Q 74 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
+  <path d="M 50 5 Q 77.5 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
+  <path d="M 50 5 Q 81 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
+  <path d="M 50 5 Q 84.5 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
+  <path d="M 50 5 Q 88 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
+  <path d="M 50 5 Q 91.5 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
   <path d="M 50 5 Q 95 50 50 95" fill="none" stroke="#1a1a2e" stroke-width="0.5" opacity="0.5"/>
   
   <!-- Simple arc representing WSPR path -->
