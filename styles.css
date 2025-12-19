@@ -272,6 +272,15 @@ body {
     font-size: 0.9em;
 }
 
+.checkbox-label.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.checkbox-label.disabled input[type="checkbox"] {
+    cursor: not-allowed;
+}
+
 .checkbox-label input[type="checkbox"] {
     width: 16px;
     height: 16px;

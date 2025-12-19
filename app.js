@@ -346,6 +346,10 @@ let timelapseDataMinTime = null;
 let timelapseDataMaxTime = null;
 let timelapseCurrentWindowStart = null;
 let timelapseAllSpots = [];
+let heatmapRenderFrames = 0; // Count frames since heatmap was set
+let heatmapRenderWaitFrames = 5; // Wait 5 frames for heatmap to render
+let currentHeatmapData = []; // Store current heatmap data to keep it visible during computation
+let pendingHeatmapData = null; // Store next heatmap data before swapping
 
 // Band filter elements
 const bandCheckboxes = document.querySelectorAll('.band-checkbox input[type="checkbox"]');
@@ -469,6 +473,16 @@ function toggleTimelapseMode() {
     if (isTimelapse && beaconModeEl.checked) {
         beaconModeEl.checked = false;
         toggleBeaconMode();
+    }
+    
+    // Disable and uncheck "animate lines" when time-lapse is enabled
+    if (isTimelapse) {
+        animateLinesEl.disabled = true;
+        animateLinesEl.checked = false;
+        animateLinesEl.parentElement.classList.add('disabled');
+    } else {
+        animateLinesEl.disabled = false;
+        animateLinesEl.parentElement.classList.remove('disabled');
     }
     
     if (isTimelapse) {
@@ -630,9 +644,83 @@ function renderTimelapseWindow() {
     globe.pointAltitude(0.005);
     globe.labelsData([]);
     globe.ringsData([]);
-    globe.pointsData(showMarkersEl.checked ? allPoints : []);
-    globe.arcsData(arcs);
-    globe.heatmapsData([]);
+    
+    // Check if heatmap mode is enabled
+    const showHeatmap = heatmapModeEl && heatmapModeEl.checked;
+    
+    // Set data based on mode
+    if (showHeatmap) {
+        // Heatmap mode - show only heatmap, hide arcs and points
+        globe.pointsData([]);
+        globe.arcsData([]);
+        
+        // Build heatmap data from spots in current window
+        const locationCounts = new Map();
+        
+        // Use coarser grid during animation (2 degrees) for faster computation
+        const gridSize = timelapseIsPlaying ? 2 : 1;
+        
+        // Count spots at each location
+        for (const spot of windowSpots) {
+            const freqMHz = spot.frequency / 1000000;
+            if (!isFrequencySelected(freqMHz)) continue;
+            
+            const txLoc = gridToLatLng(spot.tx_loc);
+            const rxLoc = gridToLatLng(spot.rx_loc);
+            
+            if (txLoc) {
+                const key = `${Math.round(txLoc.lat / gridSize) * gridSize},${Math.round(txLoc.lng / gridSize) * gridSize}`;
+                locationCounts.set(key, (locationCounts.get(key) || 0) + 1);
+            }
+            if (rxLoc) {
+                const key = `${Math.round(rxLoc.lat / gridSize) * gridSize},${Math.round(rxLoc.lng / gridSize) * gridSize}`;
+                locationCounts.set(key, (locationCounts.get(key) || 0) + 1);
+            }
+        }
+        
+        // Convert to heatmap points - limit to top 150 during animation, 200 when paused
+        const maxPoints = timelapseIsPlaying ? 150 : 200;
+        const sortedLocations = Array.from(locationCounts.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, maxPoints);
+        
+        const heatmapData = [];
+        sortedLocations.forEach(([key, count]) => {
+            const [lat, lng] = key.split(',').map(Number);
+            heatmapData.push({
+                lat: lat,
+                lng: lng,
+                weight: Math.sqrt(count)
+            });
+        });
+        
+        // Always keep previous heatmap visible until new one is ready
+        // If we're still waiting for previous render, queue the new data
+        if (currentHeatmapData.length > 0 && heatmapRenderFrames < heatmapRenderWaitFrames) {
+            // Still waiting for previous heatmap to fully render, queue this one
+            pendingHeatmapData = heatmapData;
+            // Explicitly keep current heatmap visible (don't clear it)
+            if (globe.heatmapsData().length === 0 || globe.heatmapsData()[0].length === 0) {
+                // If somehow it got cleared, restore it
+                globe.heatmapsData([currentHeatmapData]);
+            }
+        } else {
+            // Previous heatmap has been rendered, safe to swap
+            currentHeatmapData = heatmapData;
+            pendingHeatmapData = null;
+            globe.heatmapsData([heatmapData]);
+            // Reset frame counter - we'll wait for it to render
+            heatmapRenderFrames = 0;
+        }
+    } else {
+        // Normal mode - show arcs and optionally points
+        globe.pointsData(showMarkersEl.checked ? allPoints : []);
+        globe.arcsData(arcs);
+        globe.heatmapsData([]);
+        currentHeatmapData = [];
+        pendingHeatmapData = null;
+        heatmapRenderFrames = heatmapRenderWaitFrames; // Skip wait when not using heatmap
+    }
     
     // Update time window display - use spots in current window
     updateTimeWindowDisplay(windowSpots);
@@ -674,8 +762,31 @@ function playTimelapse() {
     
     timelapsePlayPauseEl.textContent = '⏸ Pause';
     
+    // Track last rendered window to avoid unnecessary re-renders
+    // Initialize to current window (rounded to nearest second)
+    let lastRenderedWindowStart = Math.floor(timelapseCurrentWindowStart / 1000) * 1000;
+    
     function animate() {
         if (!timelapseIsPlaying) return;
+        
+        const showHeatmap = heatmapModeEl && heatmapModeEl.checked;
+        
+        // If heatmap mode is on, wait for heatmap to render before advancing
+        if (showHeatmap && heatmapRenderFrames < heatmapRenderWaitFrames) {
+            // Increment frame counter and wait
+            heatmapRenderFrames++;
+            
+            // If we have pending heatmap data and we've waited enough, swap it in
+            if (pendingHeatmapData && heatmapRenderFrames >= heatmapRenderWaitFrames) {
+                currentHeatmapData = pendingHeatmapData;
+                pendingHeatmapData = null;
+                globe.heatmapsData([currentHeatmapData]);
+                heatmapRenderFrames = 0; // Reset counter for new heatmap
+            }
+            
+            timelapseAnimation = requestAnimationFrame(animate);
+            return;
+        }
         
         const speed = parseFloat(timelapseSpeedEl.value);
         const elapsed = (Date.now() - timelapseStartTime) * speed;
@@ -690,11 +801,24 @@ function playTimelapse() {
             timelapseCurrentWindowStart = maxWindowStart;
             stopTimelapse();
             updateTimelapseDisplay();
-            renderTimelapseWindow();
+            // Only render if window actually changed
+            if (lastRenderedWindowStart !== maxWindowStart) {
+                renderTimelapseWindow();
+                lastRenderedWindowStart = maxWindowStart;
+            }
         } else {
-            timelapseCurrentWindowStart = newWindowStart;
-            updateTimelapseDisplay();
-            renderTimelapseWindow();
+            // Only update and render if the window has actually changed
+            // Round to nearest second to avoid micro-updates
+            const roundedWindowStart = Math.floor(newWindowStart / 1000) * 1000;
+            
+            if (lastRenderedWindowStart !== roundedWindowStart) {
+                timelapseCurrentWindowStart = roundedWindowStart;
+                updateTimelapseDisplay();
+                renderTimelapseWindow();
+                lastRenderedWindowStart = roundedWindowStart;
+            }
+            
+            // Continue animation - will wait for heatmap if needed
             timelapseAnimation = requestAnimationFrame(animate);
         }
     }
@@ -1104,7 +1228,12 @@ function rerenderData() {
     
     // Time-lapse mode overrides normal rendering
     if (isTimelapse && !isBeaconMode) {
-        initializeTimelapse();
+        // Don't initialize here if already initialized - just render current window
+        if (timelapseAllSpots.length === 0) {
+            initializeTimelapse();
+        } else {
+            renderTimelapseWindow();
+        }
         const windowSize = parseInt(timelapseWindowEl.value) || 10;
         setStatus(`Time-lapse ready: ${currentSpots.length} spots, ${windowSize}-minute windows`, 'success');
         return;
@@ -1438,5 +1567,11 @@ showMarkersEl.addEventListener('change', () => {
         rerenderArcs();
     }
 });
-heatmapModeEl.addEventListener('change', rerenderArcs);
+heatmapModeEl.addEventListener('change', () => {
+    if (timelapseModeEl.checked) {
+        renderTimelapseWindow();
+    } else {
+        rerenderArcs();
+    }
+});
 

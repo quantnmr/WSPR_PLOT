@@ -47,9 +47,18 @@
                         <li><strong>Heatmap Mode:</strong> Color-codes regions by contact density (most active areas are brightest).</li>
                     </ul>
                     
+                    <h3>Time-Lapse Animation</h3>
+                    <ul>
+                        <li><strong>Enable Time-Lapse:</strong> Check "Time-lapse animation" to animate through your loaded spots over time.</li>
+                        <li><strong>Window Size:</strong> Select the time window shown in each frame (2 minutes to 1 hour). This creates a sliding window that moves through your data.</li>
+                        <li><strong>Animation Speed:</strong> Choose from 1x (real-time) up to 10,000x to compress hours or days of data into a short viewing time.</li>
+                        <li><strong>Controls:</strong> Use Play/Pause to control animation, Reset to return to the start, and the progress slider to jump to any point in time.</li>
+                        <li><strong>Note:</strong> When time-lapse is active, "Animate lines" is automatically disabled to prevent jerky animation. Heatmap mode may not work smoothly during time-lapse animation due to rendering performance limitations.</li>
+                    </ul>
+                    
                     <h3>Visualization Options</h3>
                     <ul>
-                        <li><strong>Animate Lines:</strong> Adds a moving "dot dot dot" pattern along arcs.</li>
+                        <li><strong>Animate Lines:</strong> Adds a moving "dot dot dot" pattern along arcs. Automatically disabled during time-lapse animation.</li>
                         <li><strong>Solid Lines:</strong> Makes arcs fully opaque (default is semi-transparent).</li>
                         <li><strong>Show TX/RX Markers:</strong> Displays solid circles at transmitters and open circles at receivers.</li>
                         <li><strong>Max Lines:</strong> Limits the number of arcs displayed for better performance.</li>
