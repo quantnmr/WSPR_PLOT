@@ -331,6 +331,7 @@ function updateStats() {
 // DOM Elements
 const container = document.getElementById('globeContainer');
 const loadBtn = document.getElementById('loadBtn');
+const shareBtn = document.getElementById('shareBtn');
 const statusEl = document.getElementById('status');
 const rxCallsignEl = document.getElementById('rxCallsign');
 const txCallsignEl = document.getElementById('txCallsign');
@@ -1828,6 +1829,30 @@ function rerenderArcs() {
 
 // Event listeners
 loadBtn.addEventListener('click', loadWSPRData);
+
+// Share button - generate and copy URL to clipboard
+shareBtn.addEventListener('click', async () => {
+    const shareURL = generateShareURL();
+    
+    try {
+        // Try to copy to clipboard
+        await navigator.clipboard.writeText(shareURL);
+        setStatus('Share link copied to clipboard!', 'success');
+        
+        // Show the URL in an alert or prompt so user can see it
+        setTimeout(() => {
+            const userConfirmed = confirm(`Share link copied to clipboard!\n\n${shareURL}\n\nClick OK to open in new tab, or Cancel to close.`);
+            if (userConfirmed) {
+                window.open(shareURL, '_blank');
+            }
+        }, 100);
+    } catch (err) {
+        // Fallback if clipboard API fails - show in prompt
+        const shareText = `Share this link:\n\n${shareURL}`;
+        prompt('Copy this link:', shareURL);
+        setStatus('Share link generated (see prompt)', 'success');
+    }
+});
 animateLinesEl.addEventListener('change', () => {
     if (timelapseModeEl.checked) {
         renderTimelapseWindow();
