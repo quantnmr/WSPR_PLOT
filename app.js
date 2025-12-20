@@ -344,6 +344,7 @@ const animateLinesEl = document.getElementById('animateLines');
 const solidLinesEl = document.getElementById('solidLines');
 const showMarkersEl = document.getElementById('showMarkers');
 const heatmapModeEl = document.getElementById('heatmapMode');
+const showTerminatorEl = document.getElementById('showTerminator');
 const timeWindowDisplayEl = document.getElementById('timeWindowDisplay');
 
 const beaconModeEl = document.getElementById('beaconMode');
@@ -1289,6 +1290,14 @@ const globe = Globe()(container)
     .heatmapBandwidth(2)
     .heatmapColorSaturation(1.8)
     .onGlobeReady(() => {
+        // Identify the Earth mesh (the mesh with a texture map) so we can patch its shader later.
+        // We intentionally avoid relying on window.THREE because globe.gl may bundle Three internally.
+        globe.scene().traverse(obj => {
+            if (!earthMeshForTerminator && obj && obj.type === 'Mesh' && obj.material && obj.material.map) {
+                earthMeshForTerminator = obj;
+            }
+        });
+
         globe.scene().traverse(obj => {
             if (obj.type === 'Mesh' && obj.material && obj.material.map) {
                 const texture = obj.material.map;
@@ -1298,7 +1307,311 @@ const globe = Globe()(container)
                 texture.needsUpdate = true;
             }
         });
+
+        // If terminator is enabled on load (e.g., via future URL params), initialize it
+        if (showTerminatorEl && showTerminatorEl.checked) {
+            enableDayNightTerminator(true);
+        }
     });
+
+// --- Day/Night terminator (start with a simple line; shading later) ---
+let earthMeshForTerminator = null;
+let terminatorIntervalId = null;
+let terminatorShadeMesh = null;
+let terminatorShadeUniforms = null; // { uSunDir, uTwilight, uMaxAlpha, uTint }
+let terminatorShadeHasCompiled = false;
+// Debug flag for diagnosing terminator issues. Keep false for normal use.
+const TERMINATOR_DEBUG = false;
+
+function normalizeLng180(deg) {
+    let x = deg % 360;
+    if (x > 180) x -= 360;
+    if (x < -180) x += 360;
+    return x;
+}
+
+function getSubsolarPoint(date = new Date()) {
+    // Approx solar position (good visual accuracy): returns { lat, lng } in degrees (lng east-positive)
+    const JD = date.getTime() / 86400000 + 2440587.5;
+    const n = JD - 2451545.0; // days since J2000
+
+    const deg2rad = Math.PI / 180;
+    const rad2deg = 180 / Math.PI;
+
+    // Mean longitude & anomaly
+    let L = (280.460 + 0.9856474 * n) % 360;
+    let g = (357.528 + 0.9856003 * n) % 360;
+    if (L < 0) L += 360;
+    if (g < 0) g += 360;
+
+    const gRad = g * deg2rad;
+    const lambda = (L + 1.915 * Math.sin(gRad) + 0.020 * Math.sin(2 * gRad)) * deg2rad; // ecliptic longitude
+    const epsilon = (23.439 - 0.0000004 * n) * deg2rad; // obliquity
+
+    // Declination
+    const sinDecl = Math.sin(epsilon) * Math.sin(lambda);
+    const decl = Math.asin(sinDecl);
+
+    // Right ascension
+    const y = Math.cos(epsilon) * Math.sin(lambda);
+    const x = Math.cos(lambda);
+    let ra = Math.atan2(y, x) * rad2deg; // degrees
+    if (ra < 0) ra += 360;
+
+    // Greenwich Mean Sidereal Time (deg)
+    let GMST = (280.46061837 + 360.98564736629 * n) % 360;
+    if (GMST < 0) GMST += 360;
+
+    // Subsolar longitude = RA - GMST (east-positive), normalized
+    const subsolarLng = normalizeLng180(ra - GMST);
+    const subsolarLat = decl * rad2deg;
+
+    return { lat: subsolarLat, lng: subsolarLng };
+}
+
+function latLngToVector3(latDeg, lngDeg, radius = 1) {
+    const lat = (latDeg * Math.PI) / 180;
+    const lng = (lngDeg * Math.PI) / 180;
+    const cosLat = Math.cos(lat);
+    return {
+        x: radius * cosLat * Math.cos(lng),
+        y: radius * Math.sin(lat),
+        z: radius * cosLat * Math.sin(lng)
+    };
+}
+
+function getSunDirUnitVector(date = new Date()) {
+    const sun = getSubsolarPoint(date);
+    const v = latLngToVector3(sun.lat, sun.lng, 1);
+    const len = Math.hypot(v.x, v.y, v.z) || 1;
+    return { x: v.x / len, y: v.y / len, z: v.z / len };
+}
+
+// The terminator line uses lat/lng (globe.gl's own mapping), and it appears correct.
+// The shading overlay, however, needs to match globe.gl's internal sphere orientation.
+// Empirically, globe.gl's lon=0 axis is rotated 90° vs our simple x=cos(lon), z=sin(lon) convention.
+// So we rotate the sun direction around +Y by +90°: (x, z) -> (z, -x).
+function getSunDirUnitVectorForShading(date = new Date()) {
+    // Best: use globe.gl's own coordinate conversion so the shading matches the rendered globe exactly.
+    // This avoids any constant longitude/yaw offset ("~1 hour lag") caused by coordinate-frame mismatch.
+    try {
+        if (globe && typeof globe.getCoords === 'function') {
+            const sun = getSubsolarPoint(date);
+            const v = globe.getCoords(sun.lat, sun.lng);
+            // v can be {x,y,z} or an array-like; handle both
+            const x = typeof v.x === 'number' ? v.x : v[0];
+            const y = typeof v.y === 'number' ? v.y : v[1];
+            const z = typeof v.z === 'number' ? v.z : v[2];
+            const len = Math.hypot(x, y, z) || 1;
+            return { x: x / len, y: y / len, z: z / len };
+        }
+    } catch (_) {
+        // Fall back below
+    }
+
+    // Fallback (older builds): empirical +90° yaw correction.
+    // If you ever see a consistent east/west lag, tweak this offset.
+    const SHADE_LON_OFFSET_DEG = 0;
+    const s = getSunDirUnitVector(date);
+    // yaw +90
+    let x = s.z;
+    let y = s.y;
+    let z = -s.x;
+    if (SHADE_LON_OFFSET_DEG !== 0) {
+        const a = (SHADE_LON_OFFSET_DEG * Math.PI) / 180;
+        const ca = Math.cos(a);
+        const sa = Math.sin(a);
+        const x2 = x * ca + z * sa;
+        const z2 = -x * sa + z * ca;
+        x = x2;
+        z = z2;
+    }
+    const len = Math.hypot(x, y, z) || 1;
+    return { x: x / len, y: y / len, z: z / len };
+}
+
+function ensureTerminatorShadeOverlay() {
+    if (!earthMeshForTerminator || !earthMeshForTerminator.geometry || !earthMeshForTerminator.material) return null;
+    if (terminatorShadeMesh) return terminatorShadeMesh;
+
+    // Use constructors from globe.gl internal THREE via existing objects
+    const MeshCtor = earthMeshForTerminator.constructor;
+    const Vec3Ctor = earthMeshForTerminator.position && earthMeshForTerminator.position.constructor;
+    // Some materials don't expose `.color` (or the globe mesh may use an array of materials),
+    // so we avoid depending on THREE.Color here. We'll use Vec3 for tint instead.
+    if (!MeshCtor || !Vec3Ctor) {
+        if (TERMINATOR_DEBUG) {
+            console.warn('[terminator] cannot build overlay: missing constructors', {
+                MeshCtor: !!MeshCtor,
+                Vec3Ctor: !!Vec3Ctor,
+                materialIsArray: Array.isArray(earthMeshForTerminator.material)
+            });
+        }
+        return null;
+    }
+
+    const geom = earthMeshForTerminator.geometry.clone();
+    const baseMat = Array.isArray(earthMeshForTerminator.material)
+        ? earthMeshForTerminator.material[0]
+        : earthMeshForTerminator.material;
+
+    // IMPORTANT: Do NOT clone the earth material. Some globe.gl/three bundles have materials
+    // where `color` (or similar) can be null, and internal `.clone()` then crashes (reading `.r`).
+    // Instead, create a fresh material instance from the internal THREE constructor (safe defaults).
+    const BaseMatCtor = baseMat && baseMat.constructor ? baseMat.constructor : null;
+    if (!BaseMatCtor) {
+        if (TERMINATOR_DEBUG) {
+            console.warn('[terminator] cannot build overlay: missing base material constructor', {
+                hasBaseMat: !!baseMat,
+                materialIsArray: Array.isArray(earthMeshForTerminator.material)
+            });
+        }
+        return null;
+    }
+
+    let mat;
+    try {
+        mat = new BaseMatCtor({});
+    } catch (e) {
+        if (TERMINATOR_DEBUG) {
+            console.warn('[terminator] cannot build overlay: failed to instantiate base material ctor', e);
+        }
+        return null;
+    }
+
+    // Make it a transparent overlay.
+    // IMPORTANT: keep depthTest ON so the far side of the overlay does not project onto the near side.
+    // Keep depthWrite OFF so we don't interfere with arcs/points.
+    mat.transparent = true;
+    mat.depthTest = true;
+    mat.depthWrite = false;
+    mat.opacity = 1;
+    // Render only front faces to avoid "double" shading from backfaces.
+    // (FrontSide = 0 in three.js)
+    mat.side = 0;
+    // Remove texture influences (we'll output our own color)
+    if ('map' in mat) mat.map = null;
+    if ('emissiveMap' in mat) mat.emissiveMap = null;
+    if ('specularMap' in mat) mat.specularMap = null;
+    if ('bumpMap' in mat) mat.bumpMap = null;
+    if ('normalMap' in mat) mat.normalMap = null;
+
+    mat.onBeforeCompile = (shader) => {
+        const sunDir = getSunDirUnitVectorForShading(new Date());
+        shader.uniforms.uSunDir = { value: new Vec3Ctor(sunDir.x, sunDir.y, sunDir.z) };
+        shader.uniforms.uTwilight = { value: 0.10 }; // edge softness (slightly wider for smoother transition)
+        shader.uniforms.uMaxAlpha = { value: 0.70 }; // night darkness (more visible)
+        // vec3 tint: night-side tint color
+        shader.uniforms.uTint = {
+            // Pure black night tint (no blue cast)
+            value: new Vec3Ctor(0.0, 0.0, 0.0)
+        };
+        terminatorShadeUniforms = shader.uniforms;
+
+        // Fully override shaders for robustness (no dependency on three.js chunk includes)
+        shader.vertexShader = `
+          varying vec3 vWorldNormal;
+          void main() {
+            vWorldNormal = normalize(mat3(modelMatrix) * normal);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `;
+
+        shader.fragmentShader = `
+          precision highp float;
+          varying vec3 vWorldNormal;
+          uniform vec3 uSunDir;
+          uniform float uTwilight;
+          uniform float uMaxAlpha;
+          uniform vec3 uTint;
+          void main() {
+            vec3 n = normalize(vWorldNormal);
+            float d = dot(n, normalize(uSunDir));
+            float day = smoothstep(-uTwilight, uTwilight, d);
+            float nightAlpha = (1.0 - day) * uMaxAlpha;
+            gl_FragColor = vec4(uTint, nightAlpha);
+          }
+        `;
+
+        terminatorShadeHasCompiled = true;
+        if (TERMINATOR_DEBUG) {
+            console.log('[terminator] overlay shader compiled');
+        }
+    };
+
+    // Force unique program
+    mat.customProgramCacheKey = () => 'wspr-terminator-shade-v1';
+
+    terminatorShadeMesh = new MeshCtor(geom, mat);
+    terminatorShadeMesh.renderOrder = 3;
+    terminatorShadeMesh.frustumCulled = false;
+    if (terminatorShadeMesh.scale && terminatorShadeMesh.scale.setScalar) {
+        // Slightly above the globe to avoid z-fighting while still respecting depth.
+        terminatorShadeMesh.scale.setScalar(1.012);
+    }
+
+    // Match Earth transform (rotation/position) so shading aligns with texture orientation
+    if (terminatorShadeMesh.position && earthMeshForTerminator.position && terminatorShadeMesh.position.copy) {
+        terminatorShadeMesh.position.copy(earthMeshForTerminator.position);
+    }
+    if (terminatorShadeMesh.quaternion && earthMeshForTerminator.quaternion && terminatorShadeMesh.quaternion.copy) {
+        terminatorShadeMesh.quaternion.copy(earthMeshForTerminator.quaternion);
+    }
+
+    // Force shader compilation with our onBeforeCompile changes
+    mat.needsUpdate = true;
+    return terminatorShadeMesh;
+}
+
+function updateTerminatorShade() {
+    if (!terminatorShadeUniforms || !terminatorShadeUniforms.uSunDir || !terminatorShadeUniforms.uSunDir.value) return;
+    const sunDir = getSunDirUnitVectorForShading(new Date());
+    terminatorShadeUniforms.uSunDir.value.set(sunDir.x, sunDir.y, sunDir.z);
+}
+
+function updateTerminatorVisuals() {
+    updateTerminatorShade();
+}
+
+function enableDayNightTerminator(enabled) {
+    if (!globe || !globe.scene) return;
+
+    if (terminatorIntervalId) {
+        clearInterval(terminatorIntervalId);
+        terminatorIntervalId = null;
+    }
+
+    if (!enabled) {
+        // Clear any legacy terminator line if present
+        if (typeof globe.pathsData === 'function') globe.pathsData([]);
+        if (terminatorShadeMesh) {
+            globe.scene().remove(terminatorShadeMesh);
+        }
+        return;
+    }
+
+    // Add shading overlay mesh
+    const shade = ensureTerminatorShadeOverlay();
+    if (shade && globe.scene && !globe.scene().children.includes(shade)) {
+        globe.scene().add(shade);
+    }
+    if (terminatorShadeMesh && terminatorShadeMesh.material) {
+        // Force recompile on enable (useful after hot reloads / toggles)
+        terminatorShadeMesh.material.needsUpdate = true;
+    }
+
+    // Ensure no sharp terminator line is displayed
+    if (typeof globe.pathsData === 'function') globe.pathsData([]);
+
+    updateTerminatorVisuals();
+    terminatorIntervalId = setInterval(updateTerminatorVisuals, 60000);
+}
+
+if (showTerminatorEl) {
+    showTerminatorEl.addEventListener('change', () => {
+        enableDayNightTerminator(showTerminatorEl.checked);
+    });
+}
 
 // Handle resize
 function resize() {
