@@ -240,8 +240,8 @@ function updateStats() {
     
     statsPanel.style.display = 'block';
     
-    const selectedBands = getSelectedBands();
-    const filteredSpots = currentSpots.filter(spot => {
+    const baseSpots = filterSpotsByCallsignPrefix(currentSpots);
+    const filteredSpots = baseSpots.filter(spot => {
         const freqMHz = spot.frequency / 1000000;
         return isFrequencySelected(freqMHz);
     });
@@ -345,6 +345,7 @@ const solidLinesEl = document.getElementById('solidLines');
 const showMarkersEl = document.getElementById('showMarkers');
 const heatmapModeEl = document.getElementById('heatmapMode');
 const showTerminatorEl = document.getElementById('showTerminator');
+const excludeWeirdCallsignsEl = document.getElementById('excludeWeirdCallsigns');
 const timeWindowDisplayEl = document.getElementById('timeWindowDisplay');
 
 const beaconModeEl = document.getElementById('beaconMode');
@@ -449,6 +450,13 @@ function applyURLParameters() {
         beaconModeEl.checked = params.beacon === 'true' || params.beacon === '1';
         hasParams = true;
     }
+
+    // Callsign prefix exclusion (default ON)
+    if (params.allowWeird !== undefined && excludeWeirdCallsignsEl) {
+        // allowWeird=1 means do NOT exclude; allowWeird=0 means exclude
+        excludeWeirdCallsignsEl.checked = !(params.allowWeird === 'true' || params.allowWeird === '1');
+        hasParams = true;
+    }
     
     // Set time-lapse options
     if (params.timelapse !== undefined) {
@@ -496,6 +504,11 @@ function generateShareURL() {
     if (!showMarkersEl.checked) params.set('showMarkers', '0');
     if (heatmapModeEl.checked) params.set('heatmap', '1');
     if (beaconModeEl.checked) params.set('beacon', '1');
+
+    // Callsign prefix exclusion: default is ON, so only include param when turning it off
+    if (excludeWeirdCallsignsEl && !excludeWeirdCallsignsEl.checked) {
+        params.set('allowWeird', '1');
+    }
     
     // Add time-lapse options
     if (timelapseModeEl.checked) {
@@ -1202,6 +1215,23 @@ function buildBandFilterSQL() {
     return `(${conditions.join(' OR ')})`;
 }
 
+function shouldExcludeCallsign(sign) {
+    if (!sign) return false;
+    const s = String(sign).trim().toUpperCase();
+    if (s.length === 0) return false;
+    const c0 = s[0];
+    return c0 === '0' || c0 === '1' || c0 === 'Q';
+}
+
+function isWeirdCallsignFilterEnabled() {
+    return !!(excludeWeirdCallsignsEl && excludeWeirdCallsignsEl.checked);
+}
+
+function filterSpotsByCallsignPrefix(spots) {
+    if (!isWeirdCallsignFilterEnabled()) return spots;
+    return spots.filter(s => !shouldExcludeCallsign(s.tx_sign) && !shouldExcludeCallsign(s.rx_sign));
+}
+
 function getBandColor(freqMHz) {
     // Find closest band
     let closest = 14;
@@ -1399,9 +1429,12 @@ function getSunDirUnitVectorForShading(date = new Date()) {
             const sun = getSubsolarPoint(date);
             const v = globe.getCoords(sun.lat, sun.lng);
             // v can be {x,y,z} or an array-like; handle both
-            const x = typeof v.x === 'number' ? v.x : v[0];
-            const y = typeof v.y === 'number' ? v.y : v[1];
-            const z = typeof v.z === 'number' ? v.z : v[2];
+            const [x, y, z] = Array.isArray(v)
+                ? v
+                : (() => {
+                    const { x, y, z } = v || {};
+                    return [x, y, z];
+                })();
             const len = Math.hypot(x, y, z) || 1;
             return { x: x / len, y: y / len, z: z / len };
         }
@@ -1412,11 +1445,11 @@ function getSunDirUnitVectorForShading(date = new Date()) {
     // Fallback (older builds): empirical +90° yaw correction.
     // If you ever see a consistent east/west lag, tweak this offset.
     const SHADE_LON_OFFSET_DEG = 0;
-    const s = getSunDirUnitVector(date);
+    const { x: sx, y: sy, z: sz } = getSunDirUnitVector(date);
     // yaw +90
-    let x = s.z;
-    let y = s.y;
-    let z = -s.x;
+    let x = sz;
+    let y = sy;
+    let z = -sx;
     if (SHADE_LON_OFFSET_DEG !== 0) {
         const a = (SHADE_LON_OFFSET_DEG * Math.PI) / 180;
         const ca = Math.cos(a);
@@ -1704,6 +1737,12 @@ async function loadWSPRData() {
                 if (txCall) {
                     query += ` AND tx_sign = '${txCall}'`;
                 }
+
+                // Exclude callsigns starting with 0, 1, or Q (TX and RX)
+                if (isWeirdCallsignFilterEnabled()) {
+                    // Prefer LIKE for maximum SQL dialect compatibility (callsigns are typically stored uppercase).
+                    query += ` AND NOT (rx_sign LIKE '0%' OR rx_sign LIKE '1%' OR rx_sign LIKE 'Q%' OR tx_sign LIKE '0%' OR tx_sign LIKE '1%' OR tx_sign LIKE 'Q%')`;
+                }
                 
                 // Add band filter to query
                 const bandFilter = buildBandFilterSQL();
@@ -1729,8 +1768,8 @@ async function loadWSPRData() {
             return;
         }
 
-        // Store spots for re-rendering
-        currentSpots = data.data;
+        // Store spots for re-rendering (apply client-side safety filter too)
+        currentSpots = filterSpotsByCallsignPrefix(data.data);
 
         // Render the data
         rerenderData();
@@ -1808,7 +1847,8 @@ function renderArcs() {
     const txLocations = new Map(); // Track unique TX locations
     const rxLocations = new Map(); // Track unique RX locations
     
-    for (const spot of currentSpots) {
+    const spots = filterSpotsByCallsignPrefix(currentSpots);
+    for (const spot of spots) {
         const freqMHz = spot.frequency / 1000000;
         
         // Filter by selected bands
@@ -1963,7 +2003,7 @@ function renderArcs() {
         
         // If max lines to display is set, only use spots from sampled arcs
         const maxLinesToDisplay = maxLinesToDisplayEl.value;
-        let spotsToUse = currentSpots;
+        let spotsToUse = filterSpotsByCallsignPrefix(currentSpots);
         if (maxLinesToDisplay !== 'all' && arcs.length > 0) {
             // Use only spots that match the sampled arcs
             const sampledPaths = new Set();
@@ -1971,7 +2011,7 @@ function renderArcs() {
                 const locs = [arc.spot.tx_loc, arc.spot.rx_loc].sort();
                 sampledPaths.add(`${locs[0]}-${locs[1]}`);
             });
-            spotsToUse = currentSpots.filter(spot => {
+            spotsToUse = spotsToUse.filter(spot => {
                 const locs = [spot.tx_loc, spot.rx_loc].sort();
                 return sampledPaths.has(`${locs[0]}-${locs[1]}`);
             });
@@ -2019,7 +2059,8 @@ function renderArcs() {
     
     // Update time window display - use filtered spots for accurate time range
     if (currentSpots && currentSpots.length > 0) {
-        const filteredSpots = showHeatmap ? currentSpots : currentSpots.filter(spot => {
+        const baseSpots = filterSpotsByCallsignPrefix(currentSpots);
+        const filteredSpots = showHeatmap ? baseSpots : baseSpots.filter(spot => {
             const freqMHz = spot.frequency / 1000000;
             return isFrequencySelected(freqMHz);
         });
@@ -2036,7 +2077,7 @@ function renderBeaconPoints() {
     const seen = new Set();
     
     // Sort spots by time (oldest first)
-    const sortedSpots = [...currentSpots].sort((a, b) => 
+    const sortedSpots = [...filterSpotsByCallsignPrefix(currentSpots)].sort((a, b) => 
         new Date(a.time) - new Date(b.time)
     );
     
@@ -2194,6 +2235,16 @@ heatmapModeEl.addEventListener('change', () => {
         rerenderArcs();
     }
 });
+
+if (excludeWeirdCallsignsEl) {
+    excludeWeirdCallsignsEl.addEventListener('change', () => {
+        if (timelapseModeEl.checked) {
+            renderTimelapseWindow();
+        } else {
+            rerenderArcs();
+        }
+    });
+}
 
 // Auto-update display when Max Lines to Display changes
 maxLinesToDisplayEl.addEventListener('change', () => {
