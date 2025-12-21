@@ -35,6 +35,12 @@
                         <li>Click <strong>Load WSPR Spots</strong>.</li>
                     </ol>
 
+                    <h3>Mobile / Small Screens</h3>
+                    <ul>
+                        <li><strong>Hide/show sidebar</strong>: use the <strong>✕</strong> button to close the sidebar, or the <strong>☰</strong> button to reopen it.</li>
+                        <li><strong>Tip</strong>: closing the sidebar gives the globe more room and can feel faster on small devices.</li>
+                    </ul>
+
                     <h3>Understanding What You See</h3>
                     <ul>
                         <li><strong>Arcs</strong>: a propagation path from TX → RX, color-coded by band.</li>
@@ -48,7 +54,7 @@
                         <li><strong>Time window</strong>: the duration of the window you want to visualize.</li>
                         <li><strong>Days Ago / Hours Ago offsets</strong>: the window <em>ends</em> at “now minus (days + hours)”, and extends backward by the selected window size.
                             <br><em>Example:</em> “15 Minutes” + “2 Days Ago” + “4 Hours Ago” searches a 15-minute window ending 2 days and 4 hours ago.</li>
-                        <li><strong>Frequency bands</strong>: check/uncheck bands to include/exclude them (colors in the legend match the globe).</li>
+                        <li><strong>Frequency bands</strong>: check/uncheck bands to include/exclude them (colors in the legend match the globe). Use <strong>All</strong> / <strong>None</strong> to quickly toggle all bands.</li>
                         <li><strong>Exclude callsigns starting with 0, 1, or Q</strong>: enabled by default to reduce non-amateur / odd entries; uncheck to allow them.</li>
                     </ul>
 
@@ -73,7 +79,7 @@
                         <li><strong>allowWeird</strong>: set <code>allowWeird=1</code> to allow callsigns starting with 0/1/Q</li>
                         <li><strong>autoLoad</strong>: <code>autoLoad=1</code> loads automatically on page open</li>
                     </ul>
-                    <p><em>Note:</em> the day/night terminator toggle currently isn’t included in shared URLs.</p>
+                    <p><em>Notes:</em> the Share button currently does not add <code>autoLoad=1</code> (you can append it manually if you want auto-load). The day/night terminator toggle also isn’t included in shared URLs.</p>
 
                     <h3>Performance & Rendering Notes</h3>
                     <ul>
