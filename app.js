@@ -1583,7 +1583,7 @@ function ensureTerminatorShadeOverlay() {
     if (terminatorShadeMesh.scale && terminatorShadeMesh.scale.setScalar) {
         // Slightly above the globe to avoid z-fighting while still respecting depth.
         // Lower values hug the surface more closely but can increase z-fighting risk on some GPUs.
-        terminatorShadeMesh.scale.setScalar(1.001);
+        terminatorShadeMesh.scale.setScalar(1.002);
     }
 
     // Match Earth transform (rotation/position) so shading aligns with texture orientation
