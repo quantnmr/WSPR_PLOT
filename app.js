@@ -1164,20 +1164,22 @@ timelapseProgressEl.addEventListener('mouseup', () => {
 
 // Band colors by frequency (MHz)
 const bandColors = {
-    0.137: '#ff0000',
-    0.475: '#ff6600',
-    1.8: '#ffcc00',
-    3.5: '#99ff00',
-    5.3: '#66ff00',
-    7: '#00ff00',
-    10: '#00ff99',
-    14: '#00ffff',
-    18: '#0099ff',
-    21: '#0000ff',
-    24: '#6600ff',
-    28: '#9900ff',
-    50: '#ff00ff',
-    144: '#ff0099'
+    // Reversed palette (low bands now use the previous high-band colors)
+    0.137: '#9900ff',
+    0.475: '#6600ff',
+    1.8: '#0000ff',
+    3.5: '#0099ff',
+    5.3: '#00ffff',
+    7: '#00ff99',
+    10: '#00ff00',
+    14: '#66ff00',
+    18: '#99ff00',
+    21: '#ffcc00',
+    24: '#ff6600',
+    28: '#ff0000',
+    // Special cases per request
+    50: '#808080',  // gray
+    144: '#ffffff'  // white
 };
 
 // Band frequency ranges in Hz (for SQL queries)
