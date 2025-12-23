@@ -488,8 +488,8 @@ function generateShareURL() {
     if (hoursAgoEl.value !== '0') params.set('hours', hoursAgoEl.value);
     
     // Add max spots and lines
-    if (maxLinesEl.value !== '1000') params.set('maxSpots', maxLinesEl.value);
-    if (maxLinesToDisplayEl.value !== 'all') params.set('maxLines', maxLinesToDisplayEl.value);
+    if (maxLinesEl.value !== '50000') params.set('maxSpots', maxLinesEl.value);
+    if (maxLinesToDisplayEl.value !== '2000') params.set('maxLines', maxLinesToDisplayEl.value);
     
     // Add selected bands
     const selectedBands = Array.from(document.querySelectorAll('input[data-band]:checked'))
