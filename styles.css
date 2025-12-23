@@ -52,8 +52,8 @@ body {
 
 /* Left Sidebar */
 .sidebar {
-    width: 280px;
-    min-width: 280px;
+    width: 350px;
+    min-width: 350px;
     height: 100%;
     background: #1a1a2e;
     color: #e0e0e0;
@@ -106,8 +106,8 @@ body {
 }
 
 .sidebar:not(.collapsed).accordion-open {
-    width: 560px;
-    min-width: 560px;
+    width: 1050px;
+    min-width: 1050px;
 }
 
 .sidebar-header {
@@ -625,10 +625,10 @@ body {
         transform: translateX(-100%);
     }
     
-    /* On mobile, allow sidebar to widen but cap at screen width */
+    /* On mobile, when accordion is open, make it fill entire screen */
     .sidebar.accordion-open {
-        width: min(560px, 90vw);
-        min-width: min(560px, 90vw);
+        width: 100vw;
+        min-width: 100vw;
     }
     
     #globeContainer {
@@ -774,13 +774,19 @@ body {
         width: 100%;
         min-width: 100%;
     }
+    
+    /* Ensure accordion open fills entire screen on small phones too */
+    .sidebar.accordion-open {
+        width: 100vw;
+        min-width: 100vw;
+    }
 }
 
 /* Header */
 .site-header {
     position: fixed;
     top: 0;
-    left: 280px;
+    left: 350px;
     right: 0;
     background: rgba(26, 26, 46, 0.95);
     border-bottom: 1px solid #333;
@@ -806,7 +812,7 @@ body {
 .site-footer {
     position: fixed;
     bottom: 0;
-    left: 280px;
+    left: 350px;
     right: 0;
     background: rgba(26, 26, 46, 0.95);
     border-top: 1px solid #333;

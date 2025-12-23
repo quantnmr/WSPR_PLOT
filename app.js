@@ -21,8 +21,8 @@ function updateHeaderFooterPosition() {
         header.style.left = isMobile ? '70px' : '60px';
         footer.style.left = '0';
     } else {
-        // Sidebar is 280px normally, 560px when accordion is open
-        const sidebarWidth = isAccordionOpen ? '560px' : '280px';
+        // Sidebar is 350px normally, 1050px when accordion is open
+        const sidebarWidth = isAccordionOpen ? '1050px' : '350px';
         header.style.left = sidebarWidth;
         footer.style.left = sidebarWidth;
     }
