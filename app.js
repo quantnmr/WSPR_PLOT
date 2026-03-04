@@ -483,7 +483,7 @@ function generateShareURL() {
     if (txCallsignEl.value) params.set('tx', txCallsignEl.value);
     
     // Add time settings
-    if (timeWindowEl.value !== '15') params.set('window', timeWindowEl.value);
+    if (timeWindowEl.value !== '10') params.set('window', timeWindowEl.value);
     if (daysAgoEl.value !== '0') params.set('days', daysAgoEl.value);
     if (hoursAgoEl.value !== '0') params.set('hours', hoursAgoEl.value);
     
