@@ -387,35 +387,64 @@ body {
     color: #e57373;
 }
 
-/* Stats Panel */
-.stats-panel {
-    margin-top: 15px;
-    padding: 12px;
-    background: #252540;
-    border-radius: 4px;
-    border: 1px solid #333;
+/* Analytics Tab */
+.analytics-container {
+    padding: 20px 30px;
+    overflow-y: auto;
+    flex: 1;
 }
 
-.stats-panel h2 {
-    margin: 0 0 10px 0;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #333;
-}
-
-.stat-row {
+.analytics-empty {
     display: flex;
-    justify-content: space-between;
-    padding: 5px 0;
-    font-size: 0.85em;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: #555;
+    font-size: 1.1em;
+    font-style: italic;
+}
+
+/* Stats Panel (horizontal card layout) */
+.stats-panel.stats-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 0 0 20px 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+}
+
+.stat-card {
+    flex: 1 1 140px;
+    background: #252540;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 130px;
 }
 
 .stat-label {
     color: #888;
+    font-size: 0.75em;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 .stat-value {
     color: #4fc3f7;
-    font-weight: 500;
+    font-weight: 600;
+    font-size: 1.15em;
+}
+
+/* Charts Row */
+.charts-row {
+    display: flex;
+    gap: 20px;
 }
 
 /* Frequency band legend */
@@ -487,10 +516,66 @@ body {
     margin-right: 8px;
 }
 
+/* Main Content Area */
+#mainContent {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    padding-top: 50px;
+    padding-bottom: 50px;
+}
+
+/* Tab Bar */
+.tab-bar {
+    display: flex;
+    background: #1a1a2e;
+    border-bottom: 1px solid #333;
+    flex-shrink: 0;
+    z-index: 10;
+}
+
+.tab-btn {
+    padding: 10px 24px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #888;
+    font-size: 0.85em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+    letter-spacing: 0.3px;
+}
+
+.tab-btn:hover {
+    color: #ccc;
+}
+
+.tab-btn.active {
+    color: #4fc3f7;
+    border-bottom-color: #4fc3f7;
+}
+
+/* Tab Content */
+.tab-content {
+    flex: 1;
+    display: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.tab-content.active {
+    display: flex;
+    flex-direction: column;
+}
+
 /* Globe Container */
 #globeContainer {
     flex: 1;
-    height: 100%;
+    width: 100%;
     position: relative;
     overflow: hidden;
 }
@@ -631,8 +716,28 @@ body {
         min-width: 100vw;
     }
     
-    #globeContainer {
+    #mainContent {
         width: 100%;
+        padding-top: 45px;
+        padding-bottom: 45px;
+    }
+
+    .charts-row {
+        flex-direction: column;
+    }
+
+    .stat-card {
+        flex: 1 1 calc(50% - 8px);
+        min-width: 0;
+    }
+
+    .analytics-container {
+        padding: 15px;
+    }
+
+    .tab-btn {
+        padding: 8px 16px;
+        font-size: 0.8em;
     }
     
     .globe-info {
@@ -814,17 +919,22 @@ body {
 
 /* Chart Panels */
 .chart-panel {
-    margin-top: 15px;
-    padding: 12px;
+    flex: 1;
+    min-width: 0;
+    padding: 16px;
     background: #252540;
-    border-radius: 4px;
+    border-radius: 6px;
     border: 1px solid #333;
 }
 
 .chart-panel h2 {
-    margin: 0 0 10px 0;
+    margin: 0 0 12px 0;
     padding-bottom: 8px;
     border-bottom: 1px solid #333;
+    color: #888;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .chart-panel canvas {
@@ -975,11 +1085,7 @@ body {
     text-decoration: underline;
 }
 
-/* Adjust globe container to account for header and footer */
-#globeContainer {
-    padding-top: 50px;
-    padding-bottom: 50px;
-}
+/* padding for header/footer handled by #mainContent */
 
 @media (max-width: 768px) {
     .site-header {
@@ -997,11 +1103,6 @@ body {
         padding: 6px 10px;
         font-size: 0.7em;
         height: 45px;
-    }
-    
-    #globeContainer {
-        padding-top: 45px;
-        padding-bottom: 45px;
     }
     
     /* Ensure hamburger button is always on top and clickable on mobile */

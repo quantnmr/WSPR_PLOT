@@ -80,6 +80,31 @@ function closeSidebarOnMobile() {
     }
 }
 
+// --- Tab switching ---
+const tabButtons = document.querySelectorAll('.tab-btn');
+const tabGlobe = document.getElementById('tabGlobe');
+const tabAnalytics = document.getElementById('tabAnalytics');
+
+tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+        const target = btn.dataset.tab;
+        tabButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        if (target === 'globe') {
+            tabGlobe.classList.add('active');
+            tabAnalytics.classList.remove('active');
+            setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+        } else {
+            tabGlobe.classList.remove('active');
+            tabAnalytics.classList.add('active');
+            // Re-render charts when switching to analytics (they may need to recalculate size)
+            if (typeof updateDistanceChart === 'function') updateDistanceChart();
+            if (typeof updateBandActivityChart === 'function') updateBandActivityChart();
+        }
+    });
+});
+
 // Accordion functionality
 function initAccordion() {
     const howToUseToggle = document.getElementById('howToUseToggle');
@@ -233,12 +258,15 @@ const statBestSNR = document.getElementById('statBestSNR');
 
 // Calculate and display statistics
 function updateStats() {
+    const analyticsEmpty = document.getElementById('analyticsEmpty');
     if (!currentSpots || currentSpots.length === 0) {
         statsPanel.style.display = 'none';
+        if (analyticsEmpty) analyticsEmpty.style.display = 'flex';
         return;
     }
     
-    statsPanel.style.display = 'block';
+    statsPanel.style.display = 'flex';
+    if (analyticsEmpty) analyticsEmpty.style.display = 'none';
     
     const baseSpots = filterSpotsByCallsignPrefix(currentSpots);
     const filteredSpots = baseSpots.filter(spot => {

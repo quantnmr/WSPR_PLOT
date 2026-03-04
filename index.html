@@ -350,47 +350,6 @@
 
         <div class="status" id="status">Ready to search</div>
 
-        <!-- Stats Panel -->
-        <div class="stats-panel" id="statsPanel" style="display: none;">
-            <h2>Statistics</h2>
-            <div class="stat-row">
-                <span class="stat-label">Total Spots</span>
-                <span class="stat-value" id="statTotalSpots">-</span>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label">Unique Paths</span>
-                <span class="stat-value" id="statUniquePaths">-</span>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label">Furthest Contact</span>
-                <span class="stat-value" id="statFurthest">-</span>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label">Most Active Band</span>
-                <span class="stat-value" id="statActiveBand">-</span>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label">Avg SNR</span>
-                <span class="stat-value" id="statAvgSNR">-</span>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label">Best SNR</span>
-                <span class="stat-value" id="statBestSNR">-</span>
-            </div>
-        </div>
-
-        <!-- Distance Histogram -->
-        <div class="chart-panel" id="distancePanel" style="display: none;">
-            <h2>Distance Distribution</h2>
-            <canvas id="distanceChart" height="150"></canvas>
-        </div>
-
-        <!-- Band Activity Over Time -->
-        <div class="chart-panel" id="bandActivityPanel" style="display: none;">
-            <h2>Band Activity Over Time</h2>
-            <canvas id="bandActivityChart" height="150"></canvas>
-        </div>
-
         <div class="band-legend" id="frequencyLegend">
             <h2>Frequency Bands <button class="btn-small" id="selectAllBands">All</button> <button class="btn-small" id="selectNoBands">None</button></h2>
             <div class="band-filter">
@@ -441,35 +400,89 @@
         </div>
     </header>
 
-    <!-- Globe Container -->
-    <div id="globeContainer">
-        <div class="globe-info">Drag to rotate • Scroll to zoom • Click arc for details</div>
-        <!-- Solar Data Widget -->
-        <div class="solar-widget" id="solarWidget">
-            <div class="solar-widget-header">Solar Data</div>
-            <div class="solar-widget-body">
-                <div class="solar-item">
-                    <span class="solar-label">SFI</span>
-                    <span class="solar-value" id="solarSFI">--</span>
-                </div>
-                <div class="solar-item">
-                    <span class="solar-label">SSN</span>
-                    <span class="solar-value" id="solarSSN">--</span>
-                </div>
-                <div class="solar-item">
-                    <span class="solar-label">K</span>
-                    <span class="solar-value" id="solarK">--</span>
-                </div>
-                <div class="solar-item">
-                    <span class="solar-label">A</span>
-                    <span class="solar-value" id="solarA">--</span>
-                </div>
-                <div class="solar-item">
-                    <span class="solar-label">Bz</span>
-                    <span class="solar-value" id="solarBz">--</span>
+    <!-- Main Content Area -->
+    <div id="mainContent">
+        <div class="tab-bar" id="tabBar">
+            <button class="tab-btn active" data-tab="globe">Globe</button>
+            <button class="tab-btn" data-tab="analytics">Analytics</button>
+        </div>
+
+        <!-- Globe Tab -->
+        <div class="tab-content active" id="tabGlobe">
+            <div id="globeContainer">
+                <div class="globe-info">Drag to rotate • Scroll to zoom • Click arc for details</div>
+                <div class="solar-widget" id="solarWidget">
+                    <div class="solar-widget-header">Solar Data</div>
+                    <div class="solar-widget-body">
+                        <div class="solar-item">
+                            <span class="solar-label">SFI</span>
+                            <span class="solar-value" id="solarSFI">--</span>
+                        </div>
+                        <div class="solar-item">
+                            <span class="solar-label">SSN</span>
+                            <span class="solar-value" id="solarSSN">--</span>
+                        </div>
+                        <div class="solar-item">
+                            <span class="solar-label">K</span>
+                            <span class="solar-value" id="solarK">--</span>
+                        </div>
+                        <div class="solar-item">
+                            <span class="solar-label">A</span>
+                            <span class="solar-value" id="solarA">--</span>
+                        </div>
+                        <div class="solar-item">
+                            <span class="solar-label">Bz</span>
+                            <span class="solar-value" id="solarBz">--</span>
+                        </div>
+                    </div>
+                    <div class="solar-widget-updated" id="solarUpdated"></div>
                 </div>
             </div>
-            <div class="solar-widget-updated" id="solarUpdated"></div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div class="tab-content" id="tabAnalytics">
+            <div class="analytics-container">
+                <div class="analytics-empty" id="analyticsEmpty">Load WSPR spots to see analytics</div>
+
+                <div class="stats-panel stats-cards" id="statsPanel" style="display: none;">
+                    <div class="stat-card">
+                        <span class="stat-label">Total Spots</span>
+                        <span class="stat-value" id="statTotalSpots">-</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Unique Paths</span>
+                        <span class="stat-value" id="statUniquePaths">-</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Furthest Contact</span>
+                        <span class="stat-value" id="statFurthest">-</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Most Active Band</span>
+                        <span class="stat-value" id="statActiveBand">-</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Avg SNR</span>
+                        <span class="stat-value" id="statAvgSNR">-</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Best SNR</span>
+                        <span class="stat-value" id="statBestSNR">-</span>
+                    </div>
+                </div>
+
+                <div class="charts-row">
+                    <div class="chart-panel" id="distancePanel" style="display: none;">
+                        <h2>Distance Distribution</h2>
+                        <canvas id="distanceChart" height="280"></canvas>
+                    </div>
+                    <div class="chart-panel" id="bandActivityPanel" style="display: none;">
+                        <h2>Band Activity Over Time</h2>
+                        <canvas id="bandActivityChart" height="280"></canvas>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
