@@ -347,6 +347,15 @@ const heatmapModeEl = document.getElementById('heatmapMode');
 const showTerminatorEl = document.getElementById('showTerminator');
 const excludeWeirdCallsignsEl = document.getElementById('excludeWeirdCallsigns');
 const timeWindowDisplayEl = document.getElementById('timeWindowDisplay');
+const colorBySNREl = document.getElementById('colorBySNR');
+const gridSquareOverlayEl = document.getElementById('gridSquareOverlay');
+const showSolarDataEl = document.getElementById('showSolarData');
+const myCallsignEl = document.getElementById('myCallsign');
+const myGridEl = document.getElementById('myGrid');
+const saveMyStationBtn = document.getElementById('saveMyStation');
+const clearMyStationBtn = document.getElementById('clearMyStation');
+const exportPNGBtn = document.getElementById('exportPNG');
+const exportCSVBtn = document.getElementById('exportCSV');
 
 const beaconModeEl = document.getElementById('beaconMode');
 const arcOptionsEl = document.getElementById('arcOptions');
@@ -554,6 +563,43 @@ const selectNoBandsBtn = document.getElementById('selectNoBands');
 // Auto-uppercase call signs
 rxCallsignEl.addEventListener('input', (e) => e.target.value = e.target.value.toUpperCase());
 txCallsignEl.addEventListener('input', (e) => e.target.value = e.target.value.toUpperCase());
+myCallsignEl.addEventListener('input', (e) => e.target.value = e.target.value.toUpperCase());
+myGridEl.addEventListener('input', (e) => e.target.value = e.target.value.toUpperCase());
+
+// --- My Station Mode ---
+function loadMyStation() {
+    const callsign = localStorage.getItem('wsprglobe_home_callsign');
+    const grid = localStorage.getItem('wsprglobe_home_grid');
+    if (callsign) {
+        myCallsignEl.value = callsign;
+        const params = parseURLParameters();
+        if (!params.tx) txCallsignEl.value = callsign;
+    }
+    if (grid) {
+        myGridEl.value = grid;
+    }
+    return { callsign, grid };
+}
+
+saveMyStationBtn.addEventListener('click', () => {
+    const callsign = myCallsignEl.value.trim().toUpperCase();
+    const grid = myGridEl.value.trim().toUpperCase();
+    if (callsign) {
+        localStorage.setItem('wsprglobe_home_callsign', callsign);
+        if (grid) localStorage.setItem('wsprglobe_home_grid', grid);
+        setStatus('Station saved: ' + callsign, 'success');
+    }
+});
+
+clearMyStationBtn.addEventListener('click', () => {
+    localStorage.removeItem('wsprglobe_home_callsign');
+    localStorage.removeItem('wsprglobe_home_grid');
+    myCallsignEl.value = '';
+    myGridEl.value = '';
+    setStatus('Station cleared', 'success');
+});
+
+const savedStation = loadMyStation();
 
 // Get selected bands
 function getSelectedBands() {
@@ -642,18 +688,32 @@ function getTimeColor(t) {
 function toggleBeaconMode() {
     const isBeacon = beaconModeEl.checked;
     arcOptionsEl.classList.toggle('hidden', isBeacon);
-    frequencyLegendEl.style.display = isBeacon ? 'none' : 'block';
     beaconLegendEl.style.display = isBeacon ? 'block' : 'none';
+    updateLegendVisibility();
     
-    // Disable time-lapse if beacon mode is enabled
     if (isBeacon && timelapseModeEl.checked) {
         timelapseModeEl.checked = false;
         toggleTimelapseMode();
     }
     
-    // Re-render if we have data
     if (currentSpots) {
         rerenderData();
+    }
+}
+
+function updateLegendVisibility() {
+    const isBeacon = beaconModeEl.checked;
+    const isSNR = colorBySNREl && colorBySNREl.checked;
+    const snrLegendEl = document.getElementById('snrLegend');
+    if (isBeacon) {
+        frequencyLegendEl.style.display = 'none';
+        if (snrLegendEl) snrLegendEl.style.display = 'none';
+    } else if (isSNR) {
+        frequencyLegendEl.style.display = 'none';
+        if (snrLegendEl) snrLegendEl.style.display = 'block';
+    } else {
+        frequencyLegendEl.style.display = 'block';
+        if (snrLegendEl) snrLegendEl.style.display = 'none';
     }
 }
 
@@ -763,22 +823,24 @@ function renderTimelapseWindow() {
         if (seen.has(pathKey)) continue;
         seen.add(pathKey);
         
-        let color = getBandColor(freqMHz);
-        if (!solidLinesEl.checked) {
+        const useSNR = colorBySNREl && colorBySNREl.checked;
+        let color = useSNR ? snrToColor(spot.snr) : getBandColor(freqMHz);
+        if (!solidLinesEl.checked && !useSNR) {
             color = hexToRgba(color, 0.4);
+        } else if (!solidLinesEl.checked && useSNR) {
+            const m = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+            if (m) color = `rgba(${m[1]}, ${m[2]}, ${m[3]}, 0.6)`;
         }
         
-        // Track TX location
         if (!txLocations.has(spot.tx_loc)) {
             txLocations.set(spot.tx_loc, {
                 lat: txLoc.lat,
                 lng: txLoc.lng,
-                color: getBandColor(freqMHz),
+                color: useSNR ? snrToColor(spot.snr) : getBandColor(freqMHz),
                 spot: spot
             });
         }
         
-        // Track RX location
         if (!rxLocations.has(spot.rx_loc)) {
             rxLocations.set(spot.rx_loc, {
                 lat: rxLoc.lat,
@@ -1246,6 +1308,25 @@ function getBandColor(freqMHz) {
         }
     }
     return bandColors[closest];
+}
+
+// SNR to color gradient: red (weak) -> yellow (mid) -> green (strong)
+function snrToColor(snr) {
+    const min = -30, max = 15;
+    const t = Math.max(0, Math.min(1, (snr - min) / (max - min)));
+    let r, g, b;
+    if (t < 0.5) {
+        const f = t / 0.5;
+        r = Math.round(255);
+        g = Math.round(f * 220);
+        b = 0;
+    } else {
+        const f = (t - 0.5) / 0.5;
+        r = Math.round(255 * (1 - f));
+        g = Math.round(220 + 35 * f);
+        b = 0;
+    }
+    return `rgb(${r}, ${g}, ${b})`;
 }
 
 // Maidenhead grid to lat/lng conversion
@@ -1836,8 +1917,11 @@ function rerenderData() {
         setStatus(`Showing ${arcCount} unique paths (filtered from ${currentSpots.length} spots)`, 'success');
     }
     
-    // Update statistics
+    // Update statistics and charts
     updateStats();
+    updateDistanceChart();
+    updateBandActivityChart();
+    updateGridSquareOverlay();
 }
 
 // Render arcs (normal mode)
@@ -1871,32 +1955,34 @@ function renderArcs() {
         if (seen.has(pathKey)) continue;
         seen.add(pathKey);
 
-        let color = getBandColor(freqMHz);
+        const useSNRColor = colorBySNREl && colorBySNREl.checked;
+        let color = useSNRColor ? snrToColor(spot.snr) : getBandColor(freqMHz);
         
-        // Track TX location (store first spot for this location)
         if (!txLocations.has(spot.tx_loc)) {
             txLocations.set(spot.tx_loc, {
                 lat: txLoc.lat,
                 lng: txLoc.lng,
-                color: color,
+                color: useSNRColor ? color : getBandColor(freqMHz),
                 type: 'tx',
                 spot: spot
             });
         }
         
-        // Track RX location (store first spot for this location)
         if (!rxLocations.has(spot.rx_loc)) {
             rxLocations.set(spot.rx_loc, {
                 lat: rxLoc.lat,
                 lng: rxLoc.lng,
-                color: color,
+                color: useSNRColor ? color : getBandColor(freqMHz),
                 type: 'rx',
                 spot: spot
             });
         }
         
-        if (useTransparency) {
+        if (useTransparency && !useSNRColor) {
             color = hexToRgba(color, 0.4);
+        } else if (useTransparency && useSNRColor) {
+            const match = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+            if (match) color = `rgba(${match[1]}, ${match[2]}, ${match[3]}, 0.6)`;
         }
         
         arcs.push({
@@ -2249,6 +2335,21 @@ if (excludeWeirdCallsignsEl) {
     });
 }
 
+// SNR color toggle
+if (colorBySNREl) {
+    colorBySNREl.addEventListener('change', () => {
+        updateLegendVisibility();
+        if (currentSpots) rerenderData();
+    });
+}
+
+// Grid square overlay toggle
+if (gridSquareOverlayEl) {
+    gridSquareOverlayEl.addEventListener('change', () => {
+        if (currentSpots) rerenderData();
+    });
+}
+
 // Auto-update display when Max Lines to Display changes
 maxLinesToDisplayEl.addEventListener('change', () => {
     if (currentSpots && currentSpots.length > 0) {
@@ -2259,6 +2360,353 @@ maxLinesToDisplayEl.addEventListener('change', () => {
         }
     }
 });
+
+// --- Export PNG ---
+exportPNGBtn.addEventListener('click', () => {
+    try {
+        const renderer = globe.renderer();
+        const canvas = renderer.domElement;
+        renderer.render(globe.scene(), globe.camera());
+        const link = document.createElement('a');
+        link.download = `wspr-globe-${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        setStatus('PNG exported!', 'success');
+    } catch (err) {
+        setStatus('PNG export failed: ' + err.message, 'error');
+    }
+});
+
+// --- Export CSV ---
+exportCSVBtn.addEventListener('click', () => {
+    if (!currentSpots || currentSpots.length === 0) {
+        setStatus('No data to export', 'error');
+        return;
+    }
+    const headers = ['time','tx_sign','rx_sign','tx_loc','rx_loc','frequency','snr','power','drift','distance_km'];
+    const rows = [headers.join(',')];
+    const spots = filterSpotsByCallsignPrefix(currentSpots);
+    for (const spot of spots) {
+        const freqMHz = spot.frequency / 1000000;
+        if (!isFrequencySelected(freqMHz)) continue;
+        const txLoc = gridToLatLng(spot.tx_loc);
+        const rxLoc = gridToLatLng(spot.rx_loc);
+        const dist = txLoc && rxLoc ? calculateDistance(txLoc.lat, txLoc.lng, rxLoc.lat, rxLoc.lng) : '';
+        rows.push([
+            spot.time, spot.tx_sign, spot.rx_sign, spot.tx_loc, spot.rx_loc,
+            spot.frequency, spot.snr, spot.power, spot.drift, dist
+        ].join(','));
+    }
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+    const link = document.createElement('a');
+    link.download = `wspr-spots-${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.csv`;
+    link.href = URL.createObjectURL(blob);
+    link.click();
+    URL.revokeObjectURL(link.href);
+    setStatus(`Exported ${rows.length - 1} spots to CSV`, 'success');
+});
+
+// --- Solar Data Widget ---
+let solarRefreshTimer = null;
+
+async function fetchSolarData() {
+    const widget = document.getElementById('solarWidget');
+    if (!widget) return;
+    try {
+        const [magRes, solarRes] = await Promise.all([
+            fetch('https://services.swpc.noaa.gov/products/summary/solar-wind-mag-field.json'),
+            fetch('https://services.swpc.noaa.gov/products/summary/10cm-flux.json')
+        ]);
+        const mag = await magRes.json();
+        const solar = await solarRes.json();
+
+        let kIndex = '--', aIndex = '--', sfi = '--', ssn = '--', bz = '--';
+        if (solar && solar.Flux) sfi = solar.Flux;
+        if (mag && mag.Bz) bz = mag.Bz;
+
+        // Fetch K and A indices from NOAA predicted values
+        try {
+            const kpRes = await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');
+            const kpData = await kpRes.json();
+            if (kpData && kpData.length > 1) {
+                const latest = kpData[kpData.length - 1];
+                kIndex = parseFloat(latest[1]).toFixed(1);
+            }
+        } catch (_) {}
+
+        try {
+            const ssnRes = await fetch('https://services.swpc.noaa.gov/json/solar-cycle/predicted-solar-cycle.json');
+            const ssnData = await ssnRes.json();
+            if (ssnData && ssnData.length > 0) {
+                const now = new Date();
+                const curMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+                const match = ssnData.find(d => d['time-tag'] && d['time-tag'].startsWith(curMonth));
+                if (match && match['predicted_ssn'] !== undefined) {
+                    ssn = Math.round(match['predicted_ssn']);
+                }
+            }
+        } catch (_) {}
+
+        const sfiEl = document.getElementById('solarSFI');
+        const ssnEl = document.getElementById('solarSSN');
+        const kEl = document.getElementById('solarK');
+        const aEl = document.getElementById('solarA');
+        const bzEl = document.getElementById('solarBz');
+        const updatedEl = document.getElementById('solarUpdated');
+
+        if (sfiEl) {
+            sfiEl.textContent = sfi;
+            const sfiVal = parseFloat(sfi);
+            sfiEl.className = 'solar-value ' + (sfiVal >= 150 ? 'good' : sfiVal >= 100 ? 'moderate' : 'poor');
+        }
+        if (ssnEl) {
+            ssnEl.textContent = ssn;
+            const ssnVal = parseFloat(ssn);
+            ssnEl.className = 'solar-value ' + (ssnVal >= 100 ? 'good' : ssnVal >= 50 ? 'moderate' : 'poor');
+        }
+        if (kEl) {
+            kEl.textContent = kIndex;
+            const kVal = parseFloat(kIndex);
+            kEl.className = 'solar-value ' + (kVal <= 3 ? 'good' : kVal <= 5 ? 'moderate' : 'poor');
+        }
+        if (bzEl) {
+            bzEl.textContent = bz + ' nT';
+            const bzVal = parseFloat(bz);
+            bzEl.className = 'solar-value ' + (bzVal > -5 ? 'good' : bzVal > -10 ? 'moderate' : 'poor');
+        }
+        if (aEl) aEl.textContent = aIndex;
+        if (updatedEl) {
+            updatedEl.textContent = 'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+        }
+    } catch (err) {
+        console.warn('Solar data fetch failed:', err);
+    }
+}
+
+function toggleSolarWidget() {
+    const widget = document.getElementById('solarWidget');
+    if (!widget) return;
+    const show = showSolarDataEl && showSolarDataEl.checked;
+    widget.style.display = show ? 'block' : 'none';
+    if (show && !solarRefreshTimer) {
+        fetchSolarData();
+        solarRefreshTimer = setInterval(fetchSolarData, 15 * 60 * 1000);
+    } else if (!show && solarRefreshTimer) {
+        clearInterval(solarRefreshTimer);
+        solarRefreshTimer = null;
+    }
+}
+
+if (showSolarDataEl) {
+    showSolarDataEl.addEventListener('change', toggleSolarWidget);
+}
+toggleSolarWidget();
+
+// --- Distance Histogram (Chart.js) ---
+let distanceChartInstance = null;
+
+function updateDistanceChart() {
+    const panel = document.getElementById('distancePanel');
+    const canvas = document.getElementById('distanceChart');
+    if (!panel || !canvas || !currentSpots || currentSpots.length === 0) {
+        if (panel) panel.style.display = 'none';
+        return;
+    }
+    if (typeof Chart === 'undefined') { panel.style.display = 'none'; return; }
+
+    panel.style.display = 'block';
+    const spots = filterSpotsByCallsignPrefix(currentSpots).filter(s => isFrequencySelected(s.frequency / 1000000));
+
+    const buckets = [0,500,1000,2000,3000,5000,7500,10000,15000,20000,25000];
+    const labels = [];
+    const counts = new Array(buckets.length).fill(0);
+    for (let i = 0; i < buckets.length; i++) {
+        const next = buckets[i+1] || '∞';
+        labels.push(`${buckets[i]/1000}k`);
+    }
+
+    for (const spot of spots) {
+        const txLoc = gridToLatLng(spot.tx_loc);
+        const rxLoc = gridToLatLng(spot.rx_loc);
+        if (!txLoc || !rxLoc) continue;
+        const dist = calculateDistance(txLoc.lat, txLoc.lng, rxLoc.lat, rxLoc.lng);
+        for (let i = buckets.length - 1; i >= 0; i--) {
+            if (dist >= buckets[i]) { counts[i]++; break; }
+        }
+    }
+
+    if (distanceChartInstance) distanceChartInstance.destroy();
+    distanceChartInstance = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: counts,
+                backgroundColor: 'rgba(79, 195, 247, 0.7)',
+                borderColor: '#4fc3f7',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: '#888', font: { size: 10 } }, grid: { color: '#333' } },
+                y: { ticks: { color: '#888', font: { size: 10 } }, grid: { color: '#333' }, beginAtZero: true }
+            }
+        }
+    });
+}
+
+// --- Band Activity Over Time Chart (Chart.js) ---
+let bandActivityChartInstance = null;
+
+function updateBandActivityChart() {
+    const panel = document.getElementById('bandActivityPanel');
+    const canvas = document.getElementById('bandActivityChart');
+    if (!panel || !canvas || !currentSpots || currentSpots.length === 0) {
+        if (panel) panel.style.display = 'none';
+        return;
+    }
+    if (typeof Chart === 'undefined') { panel.style.display = 'none'; return; }
+
+    panel.style.display = 'block';
+    const spots = filterSpotsByCallsignPrefix(currentSpots).filter(s => isFrequencySelected(s.frequency / 1000000));
+    if (spots.length === 0) { panel.style.display = 'none'; return; }
+
+    const times = spots.map(s => {
+        let t = s.time;
+        if (typeof t === 'string' && !t.includes('Z') && !t.includes('+') && !t.includes('-', 10)) {
+            t = t.replace(' ', 'T') + 'Z';
+        }
+        return new Date(t).getTime();
+    });
+    const minTime = Math.min(...times);
+    const maxTime = Math.max(...times);
+    const range = maxTime - minTime;
+
+    const numBuckets = Math.min(20, Math.max(5, Math.ceil(range / (2 * 60 * 1000))));
+    const bucketSize = range / numBuckets;
+
+    const activeBands = getSelectedBands();
+    const datasets = [];
+    const bucketLabels = [];
+    for (let i = 0; i < numBuckets; i++) {
+        const t = new Date(minTime + i * bucketSize);
+        bucketLabels.push(t.toISOString().slice(11, 16));
+    }
+
+    for (const band of activeBands) {
+        const bandKey = parseFloat(band);
+        const counts = new Array(numBuckets).fill(0);
+        for (let si = 0; si < spots.length; si++) {
+            const freqMHz = spots[si].frequency / 1000000;
+            let closest = 14, minDiff = Infinity;
+            for (const b of Object.keys(bandColors)) {
+                const diff = Math.abs(freqMHz - parseFloat(b));
+                if (diff < minDiff) { minDiff = diff; closest = parseFloat(b); }
+            }
+            if (closest !== bandKey) continue;
+            const bi = Math.min(numBuckets - 1, Math.floor((times[si] - minTime) / bucketSize));
+            counts[bi]++;
+        }
+        const bandLabel = bandKey < 1 ? `${(bandKey * 1000).toFixed(0)} kHz` : `${bandKey} MHz`;
+        datasets.push({
+            label: bandLabel,
+            data: counts,
+            backgroundColor: bandColors[bandKey] + '99',
+            borderColor: bandColors[bandKey],
+            borderWidth: 1
+        });
+    }
+
+    if (bandActivityChartInstance) bandActivityChartInstance.destroy();
+    bandActivityChartInstance = new Chart(canvas, {
+        type: 'bar',
+        data: { labels: bucketLabels, datasets: datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true, labels: { color: '#888', font: { size: 9 }, boxWidth: 10 } }
+            },
+            scales: {
+                x: { stacked: true, ticks: { color: '#888', font: { size: 9 }, maxRotation: 45 }, grid: { color: '#333' } },
+                y: { stacked: true, ticks: { color: '#888', font: { size: 10 } }, grid: { color: '#333' }, beginAtZero: true }
+            }
+        }
+    });
+}
+
+// --- Grid Square Heatmap Overlay ---
+function updateGridSquareOverlay() {
+    if (!globe || typeof globe.polygonsData !== 'function') return;
+    
+    const show = gridSquareOverlayEl && gridSquareOverlayEl.checked;
+    if (!show || !currentSpots || currentSpots.length === 0) {
+        globe.polygonsData([]);
+        return;
+    }
+
+    const spots = filterSpotsByCallsignPrefix(currentSpots).filter(s => isFrequencySelected(s.frequency / 1000000));
+    const gridCounts = new Map();
+
+    for (const spot of spots) {
+        // Extract 2-char field (first 2 chars of Maidenhead)
+        if (spot.tx_loc && spot.tx_loc.length >= 2) {
+            const field = spot.tx_loc.substring(0, 2).toUpperCase();
+            gridCounts.set(field, (gridCounts.get(field) || 0) + 1);
+        }
+        if (spot.rx_loc && spot.rx_loc.length >= 2) {
+            const field = spot.rx_loc.substring(0, 2).toUpperCase();
+            gridCounts.set(field, (gridCounts.get(field) || 0) + 1);
+        }
+    }
+
+    if (gridCounts.size === 0) { globe.polygonsData([]); return; }
+
+    const maxCount = Math.max(...gridCounts.values());
+    const polygons = [];
+
+    gridCounts.forEach((count, field) => {
+        if (field.length !== 2) return;
+        const a = field.charCodeAt(0) - 65;
+        const b = field.charCodeAt(1) - 65;
+        if (a < 0 || a > 17 || b < 0 || b > 17) return;
+
+        const lonStart = a * 20 - 180;
+        const latStart = b * 10 - 90;
+        const lonEnd = lonStart + 20;
+        const latEnd = latStart + 10;
+
+        const intensity = Math.min(1, count / maxCount);
+        const alpha = 0.15 + intensity * 0.45;
+
+        polygons.push({
+            geometry: {
+                type: 'Polygon',
+                coordinates: [[
+                    [lonStart, latStart],
+                    [lonEnd, latStart],
+                    [lonEnd, latEnd],
+                    [lonStart, latEnd],
+                    [lonStart, latStart]
+                ]]
+            },
+            color: `rgba(79, 195, 247, ${alpha})`,
+            label: `${field}: ${count} spots`
+        });
+    });
+
+    globe
+        .polygonsData(polygons)
+        .polygonCapColor(d => d.color)
+        .polygonSideColor(() => 'rgba(79, 195, 247, 0.05)')
+        .polygonStrokeColor(() => 'rgba(79, 195, 247, 0.3)')
+        .polygonAltitude(0.005)
+        .polygonLabel(d => d.label);
+}
 
 // Apply URL parameters on page load
 if (document.readyState === 'loading') {
@@ -2275,13 +2723,22 @@ if (document.readyState === 'loading') {
         }
     });
 } else {
-    // DOM already loaded, apply immediately
     const hasParams = applyURLParameters();
     const params = parseURLParameters();
     if (params.autoLoad === 'true' || params.autoLoad === '1' || (hasParams && params.autoLoad !== 'false')) {
         setTimeout(() => {
             loadBtn.click();
         }, 100);
+    }
+}
+
+// Auto-rotate to saved station grid on load
+if (savedStation && savedStation.grid) {
+    const loc = gridToLatLng(savedStation.grid);
+    if (loc) {
+        setTimeout(() => {
+            globe.pointOfView({ lat: loc.lat, lng: loc.lng, altitude: 2.5 }, 1000);
+        }, 500);
     }
 }
 

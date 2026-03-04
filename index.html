@@ -19,6 +19,20 @@
             <button class="sidebar-close" id="sidebarClose" title="Close sidebar">✕</button>
         </div>
 
+        <!-- My Station -->
+        <div class="my-station-section">
+            <h2>My Station</h2>
+            <div class="form-group my-station-group">
+                <input type="text" id="myCallsign" placeholder="Your callsign (e.g. K6AUS)" style="text-transform: uppercase;">
+                <input type="text" id="myGrid" placeholder="Grid square (e.g. CM87)" style="text-transform: uppercase;" maxlength="6">
+                <div class="my-station-buttons">
+                    <button class="btn-small" id="saveMyStation">Save</button>
+                    <button class="btn-small" id="clearMyStation">Clear</button>
+                </div>
+                <div class="help-text">Saves to browser. Pre-fills TX callsign and rotates globe on load.</div>
+            </div>
+        </div>
+
         <!-- How to Use Accordion -->
         <div class="accordion">
             <button class="accordion-header" id="howToUseToggle">
@@ -243,10 +257,33 @@
 
             <div class="form-group checkbox-group">
                 <label class="checkbox-label">
+                    <input type="checkbox" id="gridSquareOverlay">
+                    <span>Grid square overlay</span>
+                </label>
+                <div class="help-text">Shows Maidenhead grid squares colored by activity level.</div>
+            </div>
+
+            <div class="form-group checkbox-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="colorBySNR">
+                    <span>Color arcs by SNR</span>
+                </label>
+                <div class="help-text">Red = weak, yellow = mid, green = strong signal.</div>
+            </div>
+
+            <div class="form-group checkbox-group">
+                <label class="checkbox-label">
                     <input type="checkbox" id="showTerminator">
                     <span>Day/night terminator (current time)</span>
                 </label>
                 <div class="help-text">May introduce minor rendering artifacts on some systems and can affect heatmap appearance (dark overlay).</div>
+            </div>
+
+            <div class="form-group checkbox-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="showSolarData" checked>
+                    <span>Show solar data widget</span>
+                </label>
             </div>
 
             <div class="form-group checkbox-group">
@@ -306,6 +343,11 @@
         
         <button class="btn btn-secondary" id="shareBtn" title="Generate shareable link with current settings">🔗 Share Link</button>
 
+        <div class="export-buttons">
+            <button class="btn btn-secondary btn-half" id="exportPNG" title="Export globe as PNG image">Export PNG</button>
+            <button class="btn btn-secondary btn-half" id="exportCSV" title="Export spot data as CSV">Export CSV</button>
+        </div>
+
         <div class="status" id="status">Ready to search</div>
 
         <!-- Stats Panel -->
@@ -337,6 +379,18 @@
             </div>
         </div>
 
+        <!-- Distance Histogram -->
+        <div class="chart-panel" id="distancePanel" style="display: none;">
+            <h2>Distance Distribution</h2>
+            <canvas id="distanceChart" height="150"></canvas>
+        </div>
+
+        <!-- Band Activity Over Time -->
+        <div class="chart-panel" id="bandActivityPanel" style="display: none;">
+            <h2>Band Activity Over Time</h2>
+            <canvas id="bandActivityChart" height="150"></canvas>
+        </div>
+
         <div class="band-legend" id="frequencyLegend">
             <h2>Frequency Bands <button class="btn-small" id="selectAllBands">All</button> <button class="btn-small" id="selectNoBands">None</button></h2>
             <div class="band-filter">
@@ -366,6 +420,18 @@
                 </div>
             </div>
         </div>
+
+        <div class="band-legend" id="snrLegend" style="display: none;">
+            <h2>SNR Color Scale</h2>
+            <div class="time-gradient">
+                <div class="gradient-bar snr-gradient"></div>
+                <div class="gradient-labels">
+                    <span>-30 dB</span>
+                    <span>0 dB</span>
+                    <span>+15 dB</span>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Header -->
@@ -378,6 +444,33 @@
     <!-- Globe Container -->
     <div id="globeContainer">
         <div class="globe-info">Drag to rotate • Scroll to zoom • Click arc for details</div>
+        <!-- Solar Data Widget -->
+        <div class="solar-widget" id="solarWidget">
+            <div class="solar-widget-header">Solar Data</div>
+            <div class="solar-widget-body">
+                <div class="solar-item">
+                    <span class="solar-label">SFI</span>
+                    <span class="solar-value" id="solarSFI">--</span>
+                </div>
+                <div class="solar-item">
+                    <span class="solar-label">SSN</span>
+                    <span class="solar-value" id="solarSSN">--</span>
+                </div>
+                <div class="solar-item">
+                    <span class="solar-label">K</span>
+                    <span class="solar-value" id="solarK">--</span>
+                </div>
+                <div class="solar-item">
+                    <span class="solar-label">A</span>
+                    <span class="solar-value" id="solarA">--</span>
+                </div>
+                <div class="solar-item">
+                    <span class="solar-label">Bz</span>
+                    <span class="solar-value" id="solarBz">--</span>
+                </div>
+            </div>
+            <div class="solar-widget-updated" id="solarUpdated"></div>
+        </div>
     </div>
 
     <!-- Spot Details Popup -->
@@ -393,6 +486,7 @@
         </div>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/globe.gl"></script>
     <script src="app.js"></script>
     <script>
